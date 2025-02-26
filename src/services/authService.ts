@@ -14,6 +14,14 @@ import { User } from '../data/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
 
+interface UserData {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  username?: string;
+}
+
 // Create a new user with email and password
 export const registerWithEmail = async (email: string, password: string, username: string): Promise<UserCredential> => {
   try {
@@ -38,50 +46,106 @@ export const loginWithEmail = async (email: string, password: string): Promise<U
 };
 
 // Sign in with Google
-export const loginWithGoogle = async (): Promise<UserCredential> => {
+export const loginWithGoogle = async (): Promise<UserData> => {
   try {
-    const provider = new GoogleAuthProvider();
-    // Make sure auth is properly initialized before using signInWithCredential
-    if (!auth) {
-      throw new Error('Firebase auth not initialized');
-    }
-
-    // For React Native, we need to use GoogleSignin and signInWithCredential
-    // This is a placeholder - you'll need to install and configure @react-native-google-signin/google-signin
-    // throw new Error('Google Sign-In not properly configured for React Native. Please install @react-native-google-signin/google-signin');
-
-    // The proper implementation would look something like this:
-
-    // Configure GoogleSignin
-    GoogleSignin.configure({
+    console.log('Starting Google Sign-In process');
+    
+    const googleConfig = {
       webClientId: Config.GOOGLE_WEB_CLIENT_ID,
       iosClientId: Config.GOOGLE_IOS_CLIENT_ID,
       offlineAccess: true,
-    });
-
-    // Sign in with Google
-    const { idToken } = (await GoogleSignin.signIn()).data ?? { idToken: null };
-    if (!idToken) {
-      throw new Error('No ID token returned from Google Sign In');
+      forceCodeForRefreshToken: true,
+    };
+    console.log('GoogleSignin configuration:', googleConfig);
+    
+    GoogleSignin.configure(googleConfig);
+    
+    // Check Play Services (for Android, but good to check)
+    try {
+      const hasPlayServices = await GoogleSignin.hasPlayServices();
+      console.log('Has Play Services:', hasPlayServices);
+    } catch (playServicesError) {
+      console.error('Play Services check error:', playServicesError);
     }
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(auth, googleCredential);
-
-    // Check if user document exists, if not create it
-    const userExists = await checkUserExists(userCredential.user.uid);
-    if (!userExists) {
-      const { displayName, email, photoURL } = userCredential.user;
-      await createUserDocument(userCredential.user.uid, {
-        username: displayName || email?.split('@')[0] || 'User',
-        email: email || '',
-        avatarUrl: photoURL || undefined
-      });
+    
+    // Check if user is already signed in with Google
+    try {
+      const currentUser = await GoogleSignin.getCurrentUser();
+      if (currentUser) {
+        console.log('User is already signed in with Google, signing out first');
+        await GoogleSignin.signOut();
+      }
+    } catch (error) {
+      console.error('Error checking Google sign-in status:', error);
+      // Continue with sign-in process even if this check fails
     }
+    
+    console.log('Requesting Google Sign-In');
+    // Add error handling around the sign-in process
+    try {
+      const userInfo = (await GoogleSignin.signIn());
+      console.log('Google Sign-In successful, user info:', userInfo);
+      
+      // Access the ID token from the correct property
+      const idToken = userInfo.data?.idToken;
+      if (!idToken) {
+        throw new Error('No ID token returned from Google Sign In');
+      }
+      
+      // Create Firebase credential
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      console.log('Created Firebase credential from Google token');
+      
+      // Sign in to Firebase
+      const userCredential = await signInWithCredential(auth, googleCredential);
+      console.log('Firebase sign-in successful with Google credential');
 
-    return userCredential;
+      // Check if user document exists, if not create it
+      const userExists = await checkUserExists(userCredential.user.uid);
+      if (!userExists) {
+        const { displayName, email, photoURL } = userCredential.user;
+        await createUserDocument(userCredential.user.uid, {
+          username: displayName || email?.split('@')[0] || 'User',
+          email: email || '',
+          avatarUrl: photoURL || undefined
+        });
+      }
 
+      if (userCredential.user) {
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+          // New user, create profile
+          await setDoc(doc(db, 'users', userCredential.user.uid), {
+            email: userCredential.user.email,
+            username: userCredential.user.displayName || userCredential.user.email?.split('@')[0] || 'User',
+            avatarUrl: userCredential.user.photoURL || undefined,
+            createdAt: serverTimestamp(),
+          });
+          
+          // Add sample data for new users
+          await createDefaultLibraryForNewUser(userCredential.user.uid);
+        }
+      }
+
+      return {
+        uid: userCredential.user?.uid || '',
+        email: userCredential.user?.email || '',
+        displayName: userCredential.user?.displayName || '',
+        photoURL: userCredential.user?.photoURL || '',
+        username: userCredential.user?.displayName || userCredential.user?.email?.split('@')[0] || 'User'
+      };
+    } catch (signInError) {
+      console.error('Error during Google Sign-In process:', signInError);
+      throw signInError;
+    }
   } catch (error) {
-    console.error('Error signing in with Google:', error);
+    console.error('Detailed error in Google Sign-In:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };
@@ -108,36 +172,44 @@ export const logout = async (): Promise<void> => {
 
 // Check if user document exists in Firestore
 export const checkUserExists = async (userId: string): Promise<boolean> => {
-  const userDocRef = doc(db, 'users', userId);
-  const userDoc = await getDoc(userDocRef);
-  return userDoc.exists();
+  console.log(`Checking if user exists in Firestore: ${userId}`);
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    console.log(`Getting document reference for user: ${userId}`);
+    const userDoc = await getDoc(userDocRef);
+    const exists = userDoc.exists();
+    console.log(`User document exists: ${exists}`);
+    return exists;
+  } catch (error) {
+    console.error('Error checking if user exists:', error);
+    throw error;
+  }
 };
 
 // Create user document in Firestore
 export const createUserDocument = async (
   userId: string,
   userData: { email: string; username: string; avatarUrl?: string }
-): Promise<void> => {
-  const userDocRef = doc(db, 'users', userId);
-
-  // Create new user object
-  const newUser: Omit<User, 'id'> = {
-    username: userData.username,
-    email: userData.email,
-    avatarUrl: userData.avatarUrl,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    preferences: {
-      theme: 'light',
-      notificationsEnabled: true
-    }
+): Promise<boolean> => {
+  console.log('Creating user document for:', userId, userData);
+  
+  // Convert undefined avatarUrl to null or remove it from the object
+  const sanitizedUserData = {
+    ...userData,
+    // Either set to null
+    avatarUrl: userData.avatarUrl || null,
+    // Or use this approach to remove the field if undefined
+    // ...(userData.avatarUrl ? { avatarUrl: userData.avatarUrl } : {})
   };
-
-  await setDoc(userDocRef, {
-    ...newUser,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
+  
+  try {
+    await setDoc(doc(db, 'users', userId), sanitizedUserData);
+    console.log('User document created successfully');
+    return true;
+  } catch (error) {
+    console.log('Error creating user document:', error);
+    throw error;
+  }
 };
 
 // Get user data from Firestore with offline handling
@@ -147,9 +219,9 @@ export const getUserData = async (userId: string): Promise<User | null> => {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      const userData = userDoc.data() as Omit<User, 'id'>;
+      const userData = userDoc.data() as Omit<User, 'uid'>;
       return {
-        id: userId,
+        uid: userId,
         ...userData,
         createdAt: userData.createdAt instanceof Date
           ? userData.createdAt
@@ -165,7 +237,7 @@ export const getUserData = async (userId: string): Promise<User | null> => {
     // Return a basic user object when offline instead of null
     if (error instanceof Error && error.message.includes('offline')) {
       return {
-        id: userId,
+        uid: userId,
         username: 'Offline User',
         email: 'offline@example.com',
         createdAt: new Date(),
@@ -187,9 +259,33 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
       if (firebaseUser) {
         console.log('Firebase user authenticated:', firebaseUser.uid);
         
+        // Check if user document exists in Firestore
+        let userExists = false;
+        try {
+          userExists = await checkUserExists(firebaseUser.uid);
+        } catch (error) {
+          console.error('Error checking if user exists:', error);
+        }
+        
+        // If user doesn't exist in Firestore, create a new document
+        if (!userExists) {
+          console.log('Creating new user document for:', firebaseUser.uid);
+          try {
+            const { displayName, email, photoURL } = firebaseUser;
+            await createUserDocument(firebaseUser.uid, {
+              username: displayName || email?.split('@')[0] || 'User',
+              email: email || '',
+              avatarUrl: photoURL || undefined
+            });
+            console.log('User document created successfully');
+          } catch (error) {
+            console.error('Error creating user document:', error);
+          }
+        }
+        
         // Create a basic user object immediately to ensure navigation happens
         const basicUser: User = {
-          id: firebaseUser.uid,
+          uid: firebaseUser.uid,
           username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
           email: firebaseUser.email || 'unknown@example.com',
           createdAt: new Date(),
@@ -206,7 +302,7 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
         // Then try to get the full user data in the background
         try {
           const userData = await getUserData(firebaseUser.uid);
-          if (userData && userData.id !== basicUser.id) {
+          if (userData) {
             console.log('User data retrieved successfully, updating');
             callback(userData);
           }
@@ -223,4 +319,14 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
       callback(null);
     }
   });
+};
+
+// Helper function to create default library
+const createDefaultLibraryForNewUser = async (userId: string) => {
+  try {
+    const sampleData = require('../data/sampleData.json');
+    await setDoc(doc(db, 'users', userId, 'library', 'data'), sampleData);
+  } catch (error) {
+    console.error('Error creating default library:', error);
+  }
 }; 

@@ -1,0 +1,243 @@
+{
+    "sampleLists": {
+        "Quotes": [
+            {
+                "title": "Jordan Peterson",
+                "content": "There are cathedrals everywhere for those with the eyes to see."
+            },
+            {
+                "title": "Carl Sagan",
+                "content": "We are like butterflies who flutter for a day and think it is forever."
+            },
+            {
+                "title": "Man's Search for Meaning",
+                "content": "No man should judge unless he asks himself an absolute honesty whether, in a similar situation, he might not have done the same."
+            },
+            {
+                "title": "Fyodor Dostoevsky",
+                "content": "There is only one thing that I dread: not to be worthy of my sufferings."
+            },
+            {
+                "title": "Spinoza's Ethics",
+                "content": "Emotion, which is suffering, ceases to be suffering as soon as we form a clear and precise picture of it."
+            },
+            {
+                "title": "Richard Feynman",
+                "content": "Study hard what interests you the most in the most undisciplined, irreverent, and original manner."
+            },
+            {
+                "title": "Dumbledore",
+                "content": "Words are, in my not-so-humble opinion, our most inexhaustible source of magic. Capable of both inflicting injury and remedying it."
+            }
+        ],
+        "Poems": [
+            {
+                "title": null,
+                "content": "I would give anything for your friendship\nYou have no idea\n I would take a bullet just to let you live\nYou're worth it\nThe countless drinks and times we had\nThey'll lift me up to Heaven\nAnd when I'm gone I'll bless you all the way\nYour guardian all the way\nAll the way until our next lives\nAll the way\nYou brought me more than could fit into one life\nMemories I wish I could sink into forever\nYou marks on my soul age like leather\nI'll love you forever"
+            },
+            {
+                "title": null,
+                "content": "Sneaking out into the hills\nTipsy nights and teenage thrills\nLustful whispers give you chills\nYou taunt me cause you know I will\n\nToo many feelings that I haven't felt\nMy bucket list takes two\nI hope that makes sense\nMy dear let me make you feel like yourself\nRelax and I'll take care of everything else\n\nThings you say stay with me\nCareful what you wish for\n\nBite your lip because you're speechless\nI'll bite your neck just like the leeches\nOver under that we fall asleep\nOver under sounding good to me "
+            }
+        ],
+        "Insights": [
+            {
+                "title": null,
+                "content": "Tune into the absurd."
+            },
+            {
+                "title": null,
+                "content": "Curiosity is the first victim of overstimulation."
+            },
+            {
+                "title": null,
+                "content": "Worry not about the language of your visions, but rather the connection of your visions to present sensations."
+            },
+            {
+                "title": null,
+                "content": "All I do is sit and dream about who I could be."
+            },
+            {
+                "title": null,
+                "content": "Your love is given in the shape of your personality."
+            }
+        ]
+    },
+    "rootFolders": [
+        {
+            "id": "folder-1",
+            "name": "Personal",
+            "folders": [
+                {
+                    "id": "folder-1-1",
+                    "name": "Goals",
+                    "folders": [],
+                    "lists": [
+                        {
+                            "id": "list-1-1-1",
+                            "name": "2023 Goals",
+                            "description": "My personal goals for the year",
+                            "isPublic": false,
+                            "downloadCount": 0,
+                            "items": [
+                                {
+                                    "id": "item-1",
+                                    "content": "Read 12 books",
+                                    "orderIndex": 0,
+                                    "createdAt": "2023-01-01T00:00:00.000Z",
+                                    "updatedAt": "2023-01-01T00:00:00.000Z"
+                                },
+                                {
+                                    "id": "item-2",
+                                    "content": "Learn a new language",
+                                    "orderIndex": 1,
+                                    "createdAt": "2023-01-01T00:00:00.000Z",
+                                    "updatedAt": "2023-01-01T00:00:00.000Z"
+                                }
+                            ],
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z",
+                            "settings": {
+                                "showInToday": true,
+                                "notifyOnNew": false
+                            }
+                        }
+                    ],
+                    "createdAt": "2023-01-01T00:00:00.000Z",
+                    "updatedAt": "2023-01-01T00:00:00.000Z"
+                }
+            ],
+            "lists": [
+                {
+                    "id": "list-1-1",
+                    "name": "Daily Affirmations",
+                    "description": "Positive statements to boost my day",
+                    "isPublic": false,
+                    "downloadCount": 0,
+                    "items": [
+                        {
+                            "id": "item-1",
+                            "content": "I am capable of achieving my goals.",
+                            "orderIndex": 0,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        },
+                        {
+                            "id": "item-2",
+                            "content": "I am worthy of love and respect.",
+                            "orderIndex": 1,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        }
+                    ],
+                    "createdAt": "2023-01-01T00:00:00.000Z",
+                    "updatedAt": "2023-01-01T00:00:00.000Z",
+                    "settings": {
+                        "showInToday": true,
+                        "notifyOnNew": false
+                    }
+                }
+            ],
+            "createdAt": "2023-01-01T00:00:00.000Z",
+            "updatedAt": "2023-01-01T00:00:00.000Z"
+        },
+        {
+            "id": "folder-2",
+            "name": "Work",
+            "folders": [],
+            "lists": [
+                {
+                    "id": "list-2-1",
+                    "name": "Project Ideas",
+                    "description": "Potential projects to explore",
+                    "isPublic": false,
+                    "downloadCount": 0,
+                    "items": [
+                        {
+                            "id": "item-1",
+                            "content": "Mobile app for time tracking",
+                            "orderIndex": 0,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        },
+                        {
+                            "id": "item-2",
+                            "content": "AI-powered content suggestion tool",
+                            "orderIndex": 1,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        }
+                    ],
+                    "createdAt": "2023-01-01T00:00:00.000Z",
+                    "updatedAt": "2023-01-01T00:00:00.000Z",
+                    "settings": {
+                        "showInToday": false,
+                        "notifyOnNew": false
+                    }
+                }
+            ],
+            "createdAt": "2023-01-01T00:00:00.000Z",
+            "updatedAt": "2023-01-01T00:00:00.000Z"
+        },
+        {
+            "id": "folder-3",
+            "name": "Learning",
+            "folders": [],
+            "lists": [
+                {
+                    "id": "list-3-1",
+                    "name": "Vocabulary",
+                    "description": "New words to learn",
+                    "isPublic": true,
+                    "downloadCount": 5,
+                    "items": [
+                        {
+                            "id": "item-1",
+                            "content": "Ephemeral - lasting for a very short time",
+                            "orderIndex": 0,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        },
+                        {
+                            "id": "item-2",
+                            "content": "Serendipity - the occurrence of events by chance in a happy or beneficial way",
+                            "orderIndex": 1,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        }
+                    ],
+                    "createdAt": "2023-01-01T00:00:00.000Z",
+                    "updatedAt": "2023-01-01T00:00:00.000Z",
+                    "settings": {
+                        "showInToday": true,
+                        "notifyOnNew": true
+                    }
+                },
+                {
+                    "id": "list-3-2",
+                    "name": "Book Notes",
+                    "description": "Insights from books I've read",
+                    "isPublic": false,
+                    "downloadCount": 0,
+                    "items": [
+                        {
+                            "id": "item-1",
+                            "content": "Atomic Habits - Small improvements compound over time",
+                            "orderIndex": 0,
+                            "createdAt": "2023-01-01T00:00:00.000Z",
+                            "updatedAt": "2023-01-01T00:00:00.000Z"
+                        }
+                    ],
+                    "createdAt": "2023-01-01T00:00:00.000Z",
+                    "updatedAt": "2023-01-01T00:00:00.000Z",
+                    "settings": {
+                        "showInToday": false,
+                        "notifyOnNew": false
+                    }
+                }
+            ],
+            "createdAt": "2023-01-01T00:00:00.000Z",
+            "updatedAt": "2023-01-01T00:00:00.000Z"
+        }
+    ]
+}

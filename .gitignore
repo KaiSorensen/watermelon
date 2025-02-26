@@ -81,7 +81,12 @@ yarn-error.log
 
 # Firebase config files
 ios/GoogleService-Info.plist
+ios/oftheday/Info.plist
 android/app/google-services.json
 
 # iOS config files with secrets
 ios/Config/*
+
+# Google Services (e.g. APIs or Firebase)
+google-services.json
+GoogleService-Info.plist

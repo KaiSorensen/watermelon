@@ -1,48 +1,57 @@
-type User = {
-    id: string; // UUID
-    username: string;
+export interface User {
+    uid: string;
     email: string;
-    avatarUrl?: string; // Profile image URL
+    displayName?: string;
+    photoURL?: string;
+    username: string;
     createdAt: Date;
     updatedAt: Date;
-    preferences: {
-        theme: "light" | "dark";
+    preferences?: {
+        theme: 'light' | 'dark';
         notificationsEnabled: boolean;
     };
-};
+}
 
-type Folder = {
+export interface ListItem {
     id: string;
-    userId: string; // Owner
-    parentFolderId?: string | null; // Null if it's a root folder
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-};
-
-type List = {
-    id: string;
+    listId: string;
     userId: string;
-    parentFolderId?: string | null; // Folder ID if it's inside a folder
-    title: string;
-    description?: string;
-    coverImageUrl?: string; // Optional list cover image
-    isPublic: boolean;
-    sortOrder: "manual" | "alphabetical" | "recent";
-    createdAt: Date;
-    updatedAt: Date;
-};
-
-type ListItem = {
-    id: string;
-    listId: string; // Parent list
-    userId: string;
+    content: string;
     title?: string;
-    content: string; // Markdown/HTML for rich text
-    imageUrls?: string[]; // Array of image URLs if images are embedded
-    orderIndex?: number; // For manual sorting
+    orderIndex: number;
     createdAt: Date;
     updatedAt: Date;
-};
+}
 
-export type { User, Folder, List, ListItem };
+export interface List {
+    id: string;
+    userId: string;
+    name: string;
+    description?: string;
+    items: ListItem[];
+    isPublic: boolean;
+    downloadCount: number;
+    parentFolderId?: string | null;
+    coverImageUrl?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    settings: {
+        showInToday: boolean;
+        notifyOnNew: boolean;
+    };
+}
+
+export interface Folder {
+    id: string;
+    userId: string;
+    name: string;
+    parentFolderId?: string | null;
+    folders: Folder[];
+    lists: List[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface Library {
+    rootFolders: Folder[];
+}
