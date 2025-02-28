@@ -28,6 +28,50 @@
             {
                 "title": "Dumbledore",
                 "content": "Words are, in my not-so-humble opinion, our most inexhaustible source of magic. Capable of both inflicting injury and remedying it."
+            },
+            {
+                "title": "Dune",
+                "content": "Deep in the human unconscious is a pervasive need for a logical universe that makes sense. But the real universe is always one step beyond logic."
+            },
+            {
+                "title": "Miyamoto Musashi",
+                "content": "If you know the way broadly, you will see it in everything."
+            },
+            {
+                "title": "Albert Einstein",
+                "content": "God doesn’t play dice with the universe."
+            },
+            {
+                "title": "Neils Bohr",
+                "content": "Einstein, stop telling God what to do."
+            },
+            {
+                "title": "Friedrich Nietzsche",
+                "content": "The line between good and evil runs through the heart of every man."
+            },
+            {
+                "title": "Dune: Messiah",
+                "content": "The convoluted wording of legalisms grew up around the necessity to hide from ourselves the violence we intend toward each other. Between depriving a man of one hour from his life and depriving him of his life there exists only a difference of degree. You have done violence to him, consumed his energy. Elaborate euphemisms may conceal your intent to kill, but behind any use of power over another the ultimate assumption remains: ‘I feed on your energy.’"
+            },
+            {
+                "title": "Waymond Wang (Everything Everywhere All At Once)",
+                "content": "Even though you broke my heart yet again, in another life I would’ve really liked just doing laundry and taxes with you. I’m not kind because I’m naive; I’m kind because it’s strategic and necessary."
+            },
+            {
+                "title": "William Shakespeare",
+                "content": "A rose by any other name would smell as sweet."
+            },
+            {
+                "title": "Friedrich Nietzsche",
+                "content": "If you gaze long enough into the abyss, the abyss gazes back into you."
+            },
+            {
+                "title": "Jordan Peterson",
+                "content": "You have very little right to break rules, until you have mastered them."
+            },
+            {
+                "title": "Proverbs 3:5-6",
+                "content": "In all your ways acknowledge him, and he will make straight your paths."
             }
         ],
         "Poems": [
@@ -60,184 +104,31 @@
             {
                 "title": null,
                 "content": "Your love is given in the shape of your personality."
+            },
+            {
+                "title": null,
+                "content": "From your stay in the wilderness, you take something with you in your heart that guides you thereafter."
+            },
+            {
+                "title": null,
+                "content": "Woven into the fabric of beauty is the nature of truth."
+            },
+            {
+                "title": null,
+                "content": "We live in such a beautiful world: physically, but also in the minds we inhabit. The depth of your eyes runs as deep as the ocean."
+            },
+            {
+                "title": null,
+                "content": "I'm my own mystery."
+            },
+            {
+                "title": null,
+                "content": "Be present, accept your burden, and give energy."
+            },
+            {
+                "title": null,
+                "content": "Be alive, accept the blues, pay forward the blessings from men before you."
             }
         ]
-    },
-    "rootFolders": [
-        {
-            "id": "folder-1",
-            "name": "Personal",
-            "folders": [
-                {
-                    "id": "folder-1-1",
-                    "name": "Goals",
-                    "folders": [],
-                    "lists": [
-                        {
-                            "id": "list-1-1-1",
-                            "name": "2023 Goals",
-                            "description": "My personal goals for the year",
-                            "isPublic": false,
-                            "downloadCount": 0,
-                            "items": [
-                                {
-                                    "id": "item-1",
-                                    "content": "Read 12 books",
-                                    "orderIndex": 0,
-                                    "createdAt": "2023-01-01T00:00:00.000Z",
-                                    "updatedAt": "2023-01-01T00:00:00.000Z"
-                                },
-                                {
-                                    "id": "item-2",
-                                    "content": "Learn a new language",
-                                    "orderIndex": 1,
-                                    "createdAt": "2023-01-01T00:00:00.000Z",
-                                    "updatedAt": "2023-01-01T00:00:00.000Z"
-                                }
-                            ],
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z",
-                            "settings": {
-                                "showInToday": true,
-                                "notifyOnNew": false
-                            }
-                        }
-                    ],
-                    "createdAt": "2023-01-01T00:00:00.000Z",
-                    "updatedAt": "2023-01-01T00:00:00.000Z"
-                }
-            ],
-            "lists": [
-                {
-                    "id": "list-1-1",
-                    "name": "Daily Affirmations",
-                    "description": "Positive statements to boost my day",
-                    "isPublic": false,
-                    "downloadCount": 0,
-                    "items": [
-                        {
-                            "id": "item-1",
-                            "content": "I am capable of achieving my goals.",
-                            "orderIndex": 0,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        },
-                        {
-                            "id": "item-2",
-                            "content": "I am worthy of love and respect.",
-                            "orderIndex": 1,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        }
-                    ],
-                    "createdAt": "2023-01-01T00:00:00.000Z",
-                    "updatedAt": "2023-01-01T00:00:00.000Z",
-                    "settings": {
-                        "showInToday": true,
-                        "notifyOnNew": false
-                    }
-                }
-            ],
-            "createdAt": "2023-01-01T00:00:00.000Z",
-            "updatedAt": "2023-01-01T00:00:00.000Z"
-        },
-        {
-            "id": "folder-2",
-            "name": "Work",
-            "folders": [],
-            "lists": [
-                {
-                    "id": "list-2-1",
-                    "name": "Project Ideas",
-                    "description": "Potential projects to explore",
-                    "isPublic": false,
-                    "downloadCount": 0,
-                    "items": [
-                        {
-                            "id": "item-1",
-                            "content": "Mobile app for time tracking",
-                            "orderIndex": 0,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        },
-                        {
-                            "id": "item-2",
-                            "content": "AI-powered content suggestion tool",
-                            "orderIndex": 1,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        }
-                    ],
-                    "createdAt": "2023-01-01T00:00:00.000Z",
-                    "updatedAt": "2023-01-01T00:00:00.000Z",
-                    "settings": {
-                        "showInToday": false,
-                        "notifyOnNew": false
-                    }
-                }
-            ],
-            "createdAt": "2023-01-01T00:00:00.000Z",
-            "updatedAt": "2023-01-01T00:00:00.000Z"
-        },
-        {
-            "id": "folder-3",
-            "name": "Learning",
-            "folders": [],
-            "lists": [
-                {
-                    "id": "list-3-1",
-                    "name": "Vocabulary",
-                    "description": "New words to learn",
-                    "isPublic": true,
-                    "downloadCount": 5,
-                    "items": [
-                        {
-                            "id": "item-1",
-                            "content": "Ephemeral - lasting for a very short time",
-                            "orderIndex": 0,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        },
-                        {
-                            "id": "item-2",
-                            "content": "Serendipity - the occurrence of events by chance in a happy or beneficial way",
-                            "orderIndex": 1,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        }
-                    ],
-                    "createdAt": "2023-01-01T00:00:00.000Z",
-                    "updatedAt": "2023-01-01T00:00:00.000Z",
-                    "settings": {
-                        "showInToday": true,
-                        "notifyOnNew": true
-                    }
-                },
-                {
-                    "id": "list-3-2",
-                    "name": "Book Notes",
-                    "description": "Insights from books I've read",
-                    "isPublic": false,
-                    "downloadCount": 0,
-                    "items": [
-                        {
-                            "id": "item-1",
-                            "content": "Atomic Habits - Small improvements compound over time",
-                            "orderIndex": 0,
-                            "createdAt": "2023-01-01T00:00:00.000Z",
-                            "updatedAt": "2023-01-01T00:00:00.000Z"
-                        }
-                    ],
-                    "createdAt": "2023-01-01T00:00:00.000Z",
-                    "updatedAt": "2023-01-01T00:00:00.000Z",
-                    "settings": {
-                        "showInToday": false,
-                        "notifyOnNew": false
-                    }
-                }
-            ],
-            "createdAt": "2023-01-01T00:00:00.000Z",
-            "updatedAt": "2023-01-01T00:00:00.000Z"
-        }
-    ]
+    }
 }

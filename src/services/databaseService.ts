@@ -1,24 +1,5 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  deleteDoc, 
-  updateDoc, 
-  serverTimestamp, 
-  Timestamp,
-  limit,
-  startAfter,
-  DocumentSnapshot,
-  addDoc,
-  writeBatch
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { User, Folder, List, ListItem, Library } from '../data/types';
+import { supabase } from '../supabase';
 
 // ==================== USER FUNCTIONS ====================
 
@@ -30,11 +11,15 @@ export const updateUserProfile = async (
   updates: Partial<Omit<User, 'id' | 'createdAt'>>
 ): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    const { error } = await supabase
+      .from('users')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
@@ -49,11 +34,15 @@ export const updateUserPreferences = async (
   preferences: User['preferences']
 ): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      preferences,
-      updatedAt: serverTimestamp()
-    });
+    const { error } = await supabase
+      .from('users')
+      .update({
+        preferences,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating user preferences:', error);
     throw error;
@@ -70,20 +59,32 @@ export const createFolder = async (
   folderData: Omit<Folder, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<Folder> => {
   try {
-    const folderRef = collection(db, 'folders');
-    const newFolderDoc = await addDoc(folderRef, {
-      ...folderData,
-      userId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('folders')
+      .insert([
+        {
+          user_id: userId,
+          parent_folder_id: folderData.parentFolderId,
+          name: folderData.name,
+          created_at: now,
+          updated_at: now
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) throw error;
 
     return {
-      id: newFolderDoc.id,
+      id: data.id,
       userId,
-      ...folderData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      parentFolderId: data.parent_folder_id,
+      name: data.name,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      folders: [],
+      lists: []
     };
   } catch (error) {
     console.error('Error creating folder:', error);
@@ -96,28 +97,24 @@ export const createFolder = async (
  */
 export const getUserFolders = async (userId: string): Promise<Folder[]> => {
   try {
-    const foldersQuery = query(
-      collection(db, 'folders'),
-      where('userId', '==', userId),
-      orderBy('name')
-    );
+    const { data, error } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name');
     
-    const querySnapshot = await getDocs(foldersQuery);
-    const folders: Folder[] = [];
+    if (error) throw error;
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      folders.push({
-        id: doc.id,
-        userId: data.userId,
-        parentFolderId: data.parentFolderId || null,
-        name: data.name,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        folders: [], // Add missing property
-        lists: [] // Add missing property
-      });
-    });
+    const folders: Folder[] = data.map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      parentFolderId: item.parent_folder_id || null,
+      name: item.name,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+      folders: [],
+      lists: []
+    }));
     
     return folders;
   } catch (error) {
@@ -131,23 +128,26 @@ export const getUserFolders = async (userId: string): Promise<Folder[]> => {
  */
 export const getFolder = async (folderId: string): Promise<Folder | null> => {
   try {
-    const folderRef = doc(db, 'folders', folderId);
-    const folderDoc = await getDoc(folderRef);
+    const { data, error } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('id', folderId)
+      .single();
     
-    if (!folderDoc.exists()) {
-      return null;
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows returned
+      throw error;
     }
     
-    const data = folderDoc.data();
     return {
-      id: folderDoc.id,
-      userId: data.userId,
-      parentFolderId: data.parentFolderId || null,
+      id: data.id,
+      userId: data.user_id,
+      parentFolderId: data.parent_folder_id || null,
       name: data.name,
-      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-      updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-      folders: [], // Add missing property
-      lists: [] // Add missing property
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      folders: [],
+      lists: []
     };
   } catch (error) {
     console.error('Error getting folder:', error);
@@ -163,11 +163,19 @@ export const updateFolder = async (
   updates: Partial<Omit<Folder, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   try {
-    const folderRef = doc(db, 'folders', folderId);
-    await updateDoc(folderRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.name) updateData.name = updates.name;
+    if (updates.parentFolderId !== undefined) updateData.parent_folder_id = updates.parentFolderId;
+    
+    const { error } = await supabase
+      .from('folders')
+      .update(updateData)
+      .eq('id', folderId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating folder:', error);
     throw error;
@@ -179,22 +187,21 @@ export const updateFolder = async (
  */
 export const deleteFolder = async (folderId: string): Promise<void> => {
   try {
-    // First, get all lists in this folder
-    const listsQuery = query(
-      collection(db, 'lists'),
-      where('parentFolderId', '==', folderId)
-    );
-    const listsSnapshot = await getDocs(listsQuery);
+    // First, update all lists to remove folder reference
+    const { error: updateError } = await supabase
+      .from('lists')
+      .update({ parent_folder_id: null })
+      .eq('parent_folder_id', folderId);
     
-    // Update all lists to remove folder reference
-    const updatePromises = listsSnapshot.docs.map(doc => 
-      updateDoc(doc.ref, { parentFolderId: null })
-    );
-    await Promise.all(updatePromises);
+    if (updateError) throw updateError;
     
     // Then delete the folder
-    const folderRef = doc(db, 'folders', folderId);
-    await deleteDoc(folderRef);
+    const { error } = await supabase
+      .from('folders')
+      .delete()
+      .eq('id', folderId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error deleting folder:', error);
     throw error;
@@ -211,20 +218,41 @@ export const createList = async (
   listData: Omit<List, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 ): Promise<List> => {
   try {
-    const listRef = collection(db, 'lists');
-    const newListDoc = await addDoc(listRef, {
-      ...listData,
-      userId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('lists')
+      .insert([
+        {
+          user_id: userId,
+          parent_folder_id: listData.parentFolderId,
+          name: listData.name,
+          description: listData.description,
+          cover_image_url: listData.coverImageUrl,
+          is_public: listData.isPublic,
+          download_count: listData.downloadCount || 0,
+          settings: listData.settings,
+          created_at: now,
+          updated_at: now
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) throw error;
 
     return {
-      id: newListDoc.id,
+      id: data.id,
       userId,
-      ...listData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      parentFolderId: data.parent_folder_id,
+      name: data.name,
+      description: data.description,
+      coverImageUrl: data.cover_image_url,
+      isPublic: data.is_public,
+      downloadCount: data.download_count,
+      items: [],
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      settings: data.settings
     };
   } catch (error) {
     console.error('Error creating list:', error);
@@ -237,35 +265,31 @@ export const createList = async (
  */
 export const getUserLists = async (userId: string): Promise<List[]> => {
   try {
-    const listsQuery = query(
-      collection(db, 'lists'),
-      where('userId', '==', userId),
-      orderBy('name')
-    );
+    const { data, error } = await supabase
+      .from('lists')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name');
     
-    const querySnapshot = await getDocs(listsQuery);
-    const lists: List[] = [];
+    if (error) throw error;
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      lists.push({
-        id: doc.id,
-        userId: data.userId,
-        parentFolderId: data.parentFolderId || null,
-        name: data.name,
-        description: data.description,
-        coverImageUrl: data.coverImageUrl,
-        isPublic: data.isPublic,
-        downloadCount: data.downloadCount || 0,
-        items: [],
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        settings: data.settings || {
-          showInToday: false,
-          notifyOnNew: false
-        }
-      });
-    });
+    const lists: List[] = data.map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      parentFolderId: item.parent_folder_id || null,
+      name: item.name,
+      description: item.description,
+      coverImageUrl: item.cover_image_url,
+      isPublic: item.is_public,
+      downloadCount: item.download_count || 0,
+      items: [],
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+      settings: item.settings || {
+        showInToday: false,
+        notifyOnNew: false
+      }
+    }));
     
     return lists;
   } catch (error) {
@@ -279,35 +303,31 @@ export const getUserLists = async (userId: string): Promise<List[]> => {
  */
 export const getListsInFolder = async (folderId: string): Promise<List[]> => {
   try {
-    const listsQuery = query(
-      collection(db, 'lists'),
-      where('parentFolderId', '==', folderId),
-      orderBy('name')
-    );
+    const { data, error } = await supabase
+      .from('lists')
+      .select('*')
+      .eq('parent_folder_id', folderId)
+      .order('name');
     
-    const querySnapshot = await getDocs(listsQuery);
-    const lists: List[] = [];
+    if (error) throw error;
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      lists.push({
-        id: doc.id,
-        userId: data.userId,
-        parentFolderId: data.parentFolderId,
-        name: data.name,
-        description: data.description,
-        coverImageUrl: data.coverImageUrl,
-        isPublic: data.isPublic,
-        downloadCount: data.downloadCount || 0,
-        items: [],
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-        settings: data.settings || {
-          showInToday: false,
-          notifyOnNew: false
-        }
-      });
-    });
+    const lists: List[] = data.map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      parentFolderId: item.parent_folder_id,
+      name: item.name,
+      description: item.description,
+      coverImageUrl: item.cover_image_url,
+      isPublic: item.is_public,
+      downloadCount: item.download_count || 0,
+      items: [],
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+      settings: item.settings || {
+        showInToday: false,
+        notifyOnNew: false
+      }
+    }));
     
     return lists;
   } catch (error) {
@@ -321,26 +341,29 @@ export const getListsInFolder = async (folderId: string): Promise<List[]> => {
  */
 export const getList = async (listId: string): Promise<List | null> => {
   try {
-    const listRef = doc(db, 'lists', listId);
-    const listDoc = await getDoc(listRef);
+    const { data, error } = await supabase
+      .from('lists')
+      .select('*')
+      .eq('id', listId)
+      .single();
     
-    if (!listDoc.exists()) {
-      return null;
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows returned
+      throw error;
     }
     
-    const data = listDoc.data();
     return {
-      id: listDoc.id,
-      userId: data.userId,
-      parentFolderId: data.parentFolderId || null,
+      id: data.id,
+      userId: data.user_id,
+      parentFolderId: data.parent_folder_id || null,
       name: data.name,
       description: data.description,
-      coverImageUrl: data.coverImageUrl,
-      isPublic: data.isPublic,
-      downloadCount: data.downloadCount || 0,
+      coverImageUrl: data.cover_image_url,
+      isPublic: data.is_public,
+      downloadCount: data.download_count || 0,
       items: [],
-      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-      updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
       settings: data.settings || {
         showInToday: false,
         notifyOnNew: false
@@ -360,11 +383,23 @@ export const updateList = async (
   updates: Partial<Omit<List, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> => {
   try {
-    const listRef = doc(db, 'lists', listId);
-    await updateDoc(listRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.parentFolderId !== undefined) updateData.parent_folder_id = updates.parentFolderId;
+    if (updates.coverImageUrl !== undefined) updateData.cover_image_url = updates.coverImageUrl;
+    if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
+    if (updates.settings !== undefined) updateData.settings = updates.settings;
+    
+    const { error } = await supabase
+      .from('lists')
+      .update(updateData)
+      .eq('id', listId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating list:', error);
     throw error;
@@ -377,18 +412,20 @@ export const updateList = async (
 export const deleteList = async (listId: string): Promise<void> => {
   try {
     // First, delete all items in this list
-    const itemsQuery = query(
-      collection(db, 'listItems'),
-      where('listId', '==', listId)
-    );
-    const itemsSnapshot = await getDocs(itemsQuery);
+    const { error: deleteItemsError } = await supabase
+      .from('list_items')
+      .delete()
+      .eq('list_id', listId);
     
-    const deletePromises = itemsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
+    if (deleteItemsError) throw deleteItemsError;
     
     // Then delete the list
-    const listRef = doc(db, 'lists', listId);
-    await deleteDoc(listRef);
+    const { error } = await supabase
+      .from('lists')
+      .delete()
+      .eq('id', listId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error deleting list:', error);
     throw error;
@@ -400,57 +437,62 @@ export const deleteList = async (listId: string): Promise<void> => {
  */
 export const searchPublicLists = async (
   searchTerm: string,
-  lastDoc?: DocumentSnapshot,
+  lastId?: string,
   resultsPerPage: number = 20
-): Promise<{ lists: List[], lastDoc: DocumentSnapshot | null }> => {
+): Promise<{ lists: List[], lastDoc: string | null }> => {
   try {
-    // Create a query for public lists
-    let listsQuery = query(
-      collection(db, 'lists'),
-      where('isPublic', '==', true),
-      orderBy('downloadCount', 'desc'), // Sort by popularity
-      limit(resultsPerPage)
-    );
+    let query = supabase
+      .from('lists')
+      .select('*')
+      .eq('is_public', true)
+      .order('download_count', { ascending: false })
+      .limit(resultsPerPage);
     
-    if (lastDoc) {
-      listsQuery = query(listsQuery, startAfter(lastDoc));
-    }
-    
-    const querySnapshot = await getDocs(listsQuery);
-    const lists: List[] = [];
-    let lastVisible: DocumentSnapshot | null = null;
-    
-    if (!querySnapshot.empty) {
-      lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+    if (lastId) {
+      // In Supabase, we need to use a different approach for pagination
+      // We'll get the download_count of the last item and use it for filtering
+      const { data: lastItem } = await supabase
+        .from('lists')
+        .select('download_count')
+        .eq('id', lastId)
+        .single();
       
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter by search term if provided
-        if (!searchTerm || 
-            data.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (data.description && data.description.toLowerCase().includes(searchTerm.toLowerCase()))) {
-          lists.push({
-            id: doc.id,
-            userId: data.userId,
-            name: data.name,
-            description: data.description,
-            items: [], // We'll load items separately for efficiency
-            isPublic: data.isPublic,
-            downloadCount: data.downloadCount || 0,
-            parentFolderId: data.parentFolderId || null,
-            coverImageUrl: data.coverImageUrl,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-            updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-            settings: data.settings || {
-              showInToday: false,
-              notifyOnNew: false
-            }
-          });
-        }
-      });
+      if (lastItem) {
+        query = query.lt('download_count', lastItem.download_count);
+      }
     }
     
-    return { lists, lastDoc: lastVisible };
+    // Add search term filter if provided
+    if (searchTerm) {
+      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    const lists: List[] = data.map(item => ({
+      id: item.id,
+      userId: item.user_id,
+      name: item.name,
+      description: item.description,
+      items: [],
+      isPublic: item.is_public,
+      downloadCount: item.download_count || 0,
+      parentFolderId: item.parent_folder_id || null,
+      coverImageUrl: item.cover_image_url,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+      settings: item.settings || {
+        showInToday: false,
+        notifyOnNew: false
+      }
+    }));
+    
+    // Get the ID of the last item for pagination
+    const lastDoc = data.length > 0 ? data[data.length - 1].id : null;
+    
+    return { lists, lastDoc };
   } catch (error) {
     console.error('Error searching public lists:', error);
     throw error;
@@ -470,30 +512,43 @@ export const createListItem = async (
   try {
     // Get the current count of items to determine orderIndex if not provided
     if (itemData.orderIndex === undefined) {
-      const itemsQuery = query(
-        collection(db, 'listItems'),
-        where('listId', '==', listId)
-      );
-      const querySnapshot = await getDocs(itemsQuery);
-      itemData.orderIndex = querySnapshot.size;
+      const { count, error: countError } = await supabase
+        .from('list_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('list_id', listId);
+      
+      if (countError) throw countError;
+      itemData.orderIndex = count || 0;
     }
     
-    const itemRef = collection(db, 'listItems');
-    const newItemDoc = await addDoc(itemRef, {
-      ...itemData,
-      userId,
-      listId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('list_items')
+      .insert([
+        {
+          user_id: userId,
+          list_id: listId,
+          title: itemData.title,
+          content: itemData.content,
+          order_index: itemData.orderIndex,
+          created_at: now,
+          updated_at: now
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) throw error;
 
     return {
-      id: newItemDoc.id,
+      id: data.id,
       userId,
       listId,
-      ...itemData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      title: data.title,
+      content: data.content,
+      orderIndex: data.order_index,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
   } catch (error) {
     console.error('Error creating list item:', error);
@@ -506,28 +561,24 @@ export const createListItem = async (
  */
 export const getListItems = async (listId: string): Promise<ListItem[]> => {
   try {
-    const itemsQuery = query(
-      collection(db, 'listItems'),
-      where('listId', '==', listId),
-      orderBy('orderIndex')
-    );
+    const { data, error } = await supabase
+      .from('list_items')
+      .select('*')
+      .eq('list_id', listId)
+      .order('order_index');
     
-    const querySnapshot = await getDocs(itemsQuery);
-    const items: ListItem[] = [];
+    if (error) throw error;
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      items.push({
-        id: doc.id,
-        listId: data.listId,
-        userId: data.userId,
-        title: data.title,
-        content: data.content,
-        orderIndex: data.orderIndex,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt)
-      });
-    });
+    const items: ListItem[] = data.map(item => ({
+      id: item.id,
+      listId: item.list_id,
+      userId: item.user_id,
+      title: item.title,
+      content: item.content,
+      orderIndex: item.order_index,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at)
+    }));
     
     return items;
   } catch (error) {
@@ -541,23 +592,26 @@ export const getListItems = async (listId: string): Promise<ListItem[]> => {
  */
 export const getListItem = async (itemId: string): Promise<ListItem | null> => {
   try {
-    const itemRef = doc(db, 'listItems', itemId);
-    const itemDoc = await getDoc(itemRef);
+    const { data, error } = await supabase
+      .from('list_items')
+      .select('*')
+      .eq('id', itemId)
+      .single();
     
-    if (!itemDoc.exists()) {
-      return null;
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No rows returned
+      throw error;
     }
     
-    const data = itemDoc.data();
     return {
-      id: itemDoc.id,
-      listId: data.listId,
-      userId: data.userId,
+      id: data.id,
+      listId: data.list_id,
+      userId: data.user_id,
       title: data.title,
       content: data.content,
-      orderIndex: data.orderIndex,
-      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-      updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt)
+      orderIndex: data.order_index,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
   } catch (error) {
     console.error('Error getting list item:', error);
@@ -573,11 +627,20 @@ export const updateListItem = async (
   updates: Partial<Omit<ListItem, 'id' | 'userId' | 'listId' | 'createdAt'>>
 ): Promise<void> => {
   try {
-    const itemRef = doc(db, 'listItems', itemId);
-    await updateDoc(itemRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.content !== undefined) updateData.content = updates.content;
+    if (updates.orderIndex !== undefined) updateData.order_index = updates.orderIndex;
+    
+    const { error } = await supabase
+      .from('list_items')
+      .update(updateData)
+      .eq('id', itemId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error updating list item:', error);
     throw error;
@@ -589,8 +652,12 @@ export const updateListItem = async (
  */
 export const deleteListItem = async (itemId: string): Promise<void> => {
   try {
-    const itemRef = doc(db, 'listItems', itemId);
-    await deleteDoc(itemRef);
+    const { error } = await supabase
+      .from('list_items')
+      .delete()
+      .eq('id', itemId);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error deleting list item:', error);
     throw error;
@@ -605,17 +672,19 @@ export const reorderListItems = async (
   itemOrder: { id: string, orderIndex: number }[]
 ): Promise<void> => {
   try {
-    const batch = writeBatch(db);
-    
-    itemOrder.forEach(item => {
-      const itemRef = doc(db, 'listItems', item.id);
-      batch.update(itemRef, { 
-        orderIndex: item.orderIndex,
-        updatedAt: serverTimestamp()
-      });
+    // Supabase doesn't support batch operations like Firebase,
+    // so we need to update each item individually
+    const updatePromises = itemOrder.map(item => {
+      return supabase
+        .from('list_items')
+        .update({ 
+          order_index: item.orderIndex,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
     });
     
-    await batch.commit();
+    await Promise.all(updatePromises);
   } catch (error) {
     console.error('Error reordering list items:', error);
     throw error;
@@ -626,8 +695,6 @@ export const reorderListItems = async (
 
 /**
  * Gets a random item from each list configured for the today feed
- * This is a simplified implementation - you'll need to add configuration
- * for which lists should appear in the today feed and how often
  */
 export const getTodayFeedItems = async (userId: string): Promise<ListItem[]> => {
   try {
@@ -635,16 +702,31 @@ export const getTodayFeedItems = async (userId: string): Promise<ListItem[]> => 
     const userLists = await getUserLists(userId);
     
     // For each list, get one random item
-    // In a real implementation, you'd have a more sophisticated algorithm
-    // based on user preferences, history, etc.
     const todayItems: ListItem[] = [];
     
     for (const list of userLists) {
-      const items = await getListItems(list.id);
-      if (items.length > 0) {
+      const { data, error } = await supabase
+        .from('list_items')
+        .select('*')
+        .eq('list_id', list.id);
+      
+      if (error) throw error;
+      
+      if (data.length > 0) {
         // Get a random item from this list
-        const randomIndex = Math.floor(Math.random() * items.length);
-        todayItems.push(items[randomIndex]);
+        const randomIndex = Math.floor(Math.random() * data.length);
+        const item = data[randomIndex];
+        
+        todayItems.push({
+          id: item.id,
+          listId: item.list_id,
+          userId: item.user_id,
+          title: item.title,
+          content: item.content,
+          orderIndex: item.order_index,
+          createdAt: new Date(item.created_at),
+          updatedAt: new Date(item.updated_at)
+        });
       }
     }
     
@@ -659,21 +741,36 @@ export const getTodayFeedItems = async (userId: string): Promise<ListItem[]> => 
 export const fetchUserLibrary = async (userId: string): Promise<Library> => {
   try {
     // First check if the user has a library
-    const libraryDocRef = doc(db, 'users', userId, 'library', 'data');
-    const libraryDoc = await getDoc(libraryDocRef);
+    const { data, error } = await supabase
+      .from('libraries')
+      .select('data')
+      .eq('user_id', userId)
+      .single();
     
-    if (libraryDoc.exists()) {
-      return libraryDoc.data() as Library;
-    } else {
+    if (error) {
+      if (error.code !== 'PGRST116') throw error;
+      
       // If no library exists, create one with sample data
       const sampleData = require('../data/sampleData.json');
       
       // Add userId to all folders and lists in the sample data
       const processedData = addUserIdToSampleData(sampleData, userId);
       
-      await setDoc(libraryDocRef, processedData);
+      const { error: insertError } = await supabase
+        .from('libraries')
+        .insert([
+          {
+            user_id: userId,
+            data: processedData
+          }
+        ]);
+      
+      if (insertError) throw insertError;
+      
       return processedData as Library;
     }
+    
+    return data.data as Library;
   } catch (error) {
     console.error('Error fetching library:', error);
     // Return empty library as fallback
@@ -735,79 +832,90 @@ export const copyPublicList = async (
 ): Promise<List> => {
   try {
     // Get the source list
-    const sourceListRef = doc(db, 'lists', listId);
-    const sourceListDoc = await getDoc(sourceListRef);
+    const { data: sourceList, error: sourceError } = await supabase
+      .from('lists')
+      .select('*')
+      .eq('id', listId)
+      .single();
     
-    if (!sourceListDoc.exists()) {
-      throw new Error('List not found');
-    }
-    
-    const sourceList = sourceListDoc.data();
+    if (sourceError) throw sourceError;
     
     // Increment download count on the original list
-    await updateDoc(sourceListRef, {
-      downloadCount: (sourceList.downloadCount || 0) + 1
-    });
+    const { error: updateError } = await supabase
+      .from('lists')
+      .update({ download_count: (sourceList.download_count || 0) + 1 })
+      .eq('id', listId);
+    
+    if (updateError) throw updateError;
     
     // Create a new list in the user's library
-    const newListRef = collection(db, 'lists');
-    const newListData = {
-      name: sourceList.name,
-      description: sourceList.description,
-      isPublic: false, // Default to private for copied lists
-      downloadCount: 0,
-      userId: userId,
-      parentFolderId: targetFolderId,
-      coverImageUrl: sourceList.coverImageUrl,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      settings: sourceList.settings || {
-        showInToday: false,
-        notifyOnNew: false
-      }
-    };
+    const now = new Date().toISOString();
+    const { data: newList, error: insertError } = await supabase
+      .from('lists')
+      .insert([
+        {
+          name: sourceList.name,
+          description: sourceList.description,
+          is_public: false, // Default to private for copied lists
+          download_count: 0,
+          user_id: userId,
+          parent_folder_id: targetFolderId,
+          cover_image_url: sourceList.cover_image_url,
+          created_at: now,
+          updated_at: now,
+          settings: sourceList.settings || {
+            showInToday: false,
+            notifyOnNew: false
+          }
+        }
+      ])
+      .select()
+      .single();
     
-    const newListDoc = await addDoc(newListRef, newListData);
+    if (insertError) throw insertError;
     
     // Get items from the source list
-    const itemsQuery = query(
-      collection(db, 'listItems'),
-      where('listId', '==', listId),
-      orderBy('orderIndex')
-    );
+    const { data: sourceItems, error: itemsError } = await supabase
+      .from('list_items')
+      .select('*')
+      .eq('list_id', listId)
+      .order('order_index');
     
-    const itemsSnapshot = await getDocs(itemsQuery);
+    if (itemsError) throw itemsError;
     
     // Copy items to the new list
-    const batch = writeBatch(db);
-    
-    itemsSnapshot.docs.forEach((itemDoc) => {
-      const itemData = itemDoc.data();
-      const newItemRef = doc(collection(db, 'listItems'));
+    if (sourceItems.length > 0) {
+      const newItems = sourceItems.map(item => ({
+        content: item.content,
+        title: item.title,
+        list_id: newList.id,
+        user_id: userId,
+        order_index: item.order_index,
+        created_at: now,
+        updated_at: now
+      }));
       
-      batch.set(newItemRef, {
-        content: itemData.content,
-        title: itemData.title,
-        listId: newListDoc.id,
-        userId: userId,
-        orderIndex: itemData.orderIndex,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    });
-    
-    await batch.commit();
-    
-    // Update the user's library structure to include this list
-    // This would depend on how you're storing the library structure
+      const { error: insertItemsError } = await supabase
+        .from('list_items')
+        .insert(newItems);
+      
+      if (insertItemsError) throw insertItemsError;
+    }
     
     return {
-      id: newListDoc.id,
-      ...newListData,
-      items: [], // Items are stored separately
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as List;
+      id: newList.id,
+      userId: newList.user_id,
+      parentFolderId: newList.parent_folder_id,
+      name: newList.name,
+      description: newList.description,
+      coverImageUrl: newList.cover_image_url,
+      isPublic: newList.is_public,
+      downloadCount: newList.download_count,
+      items: [],
+      createdAt: new Date(newList.created_at),
+      updatedAt: new Date(newList.updated_at),
+      settings: newList.settings
+    };
   } catch (error) {
     console.error('Error copying public list:', error);
     throw error;
@@ -819,19 +927,47 @@ export const updateFolderPosition = async (
   userId: string,
   folderId: string,
   parentFolderId: string | null
-) => {
-  // This is a placeholder for the drag-and-drop functionality
-  // Will implement the actual logic later
-  console.log(`Moving folder ${folderId} to parent ${parentFolderId}`);
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('folders')
+      .update({ 
+        parent_folder_id: parentFolderId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', folderId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    console.log(`Moved folder ${folderId} to parent ${parentFolderId}`);
+  } catch (error) {
+    console.error('Error updating folder position:', error);
+    throw error;
+  }
 };
 
 // Function to update a list's position (for drag and drop)
 export const updateListPosition = async (
   userId: string,
   listId: string,
-  parentFolderId: string
-) => {
-  // This is a placeholder for the drag-and-drop functionality
-  // Will implement the actual logic later
-  console.log(`Moving list ${listId} to folder ${parentFolderId}`);
+  parentFolderId: string | null
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('lists')
+      .update({ 
+        parent_folder_id: parentFolderId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', listId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    
+    console.log(`Moving list ${listId} to folder ${parentFolderId}`);
+  } catch (error) {
+    console.error('Error updating list position:', error);
+    throw error;
+  }
 }; 

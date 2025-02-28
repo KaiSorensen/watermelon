@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { logout } from '../../services/authService';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+// import { doc, getDoc } from 'firebase/firestore';
+// import { db } from '../../firebase';
 
 const HomeScreen = () => {
   const { currentUser } = useAuth();

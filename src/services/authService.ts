@@ -1,16 +1,5 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  GoogleAuthProvider,
-  UserCredential,
-  onAuthStateChanged,
-  signInWithCredential
-} from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase';
 import { User } from '../data/types';
+import { supabase } from '../supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
 
@@ -23,12 +12,28 @@ interface UserData {
 }
 
 // Create a new user with email and password
-export const registerWithEmail = async (email: string, password: string, username: string): Promise<UserCredential> => {
+// !! this is failing to create the user profile in Supabase, resume here
+// because there are no documents, it's a SQL database, not a NoSQL database
+export const registerWithEmail = async (email: string, password: string, username: string) => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    // Create user document in Firestore
-    await createUserDocument(userCredential.user.uid, { email, username });
-    return userCredential;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+        },
+      },
+    });
+
+    if (error) throw error;
+
+    // Create user profile in Supabase
+    if (data.user) {
+      await createUserDocument(data.user.id, { email, username });
+    }
+
+    return data;
   } catch (error) {
     console.error('Error registering user:', error);
     throw error;
@@ -36,9 +41,15 @@ export const registerWithEmail = async (email: string, password: string, usernam
 };
 
 // Sign in with email and password
-export const loginWithEmail = async (email: string, password: string): Promise<UserCredential> => {
+export const loginWithEmail = async (email: string, password: string) => {
   try {
-    return await signInWithEmailAndPassword(auth, email, password);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error logging in:', error);
     throw error;
@@ -81,7 +92,6 @@ export const loginWithGoogle = async (): Promise<UserData> => {
     }
     
     console.log('Requesting Google Sign-In');
-    // Add error handling around the sign-in process
     try {
       const userInfo = (await GoogleSignin.signIn());
       console.log('Google Sign-In successful, user info:', userInfo);
@@ -92,49 +102,36 @@ export const loginWithGoogle = async (): Promise<UserData> => {
         throw new Error('No ID token returned from Google Sign In');
       }
       
-      // Create Firebase credential
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      console.log('Created Firebase credential from Google token');
+      // Sign in to Supabase with Google token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
       
-      // Sign in to Firebase
-      const userCredential = await signInWithCredential(auth, googleCredential);
-      console.log('Firebase sign-in successful with Google credential');
+      if (error) throw error;
+      
+      console.log('Supabase sign-in successful with Google credential');
 
       // Check if user document exists, if not create it
-      const userExists = await checkUserExists(userCredential.user.uid);
+      const userExists = await checkUserExists(data.user.id);
       if (!userExists) {
-        const { displayName, email, photoURL } = userCredential.user;
-        await createUserDocument(userCredential.user.uid, {
-          username: displayName || email?.split('@')[0] || 'User',
+        const { email, user_metadata } = data.user;
+        await createUserDocument(data.user.id, {
+          username: user_metadata?.name || email?.split('@')[0] || 'User',
           email: email || '',
-          avatarUrl: photoURL || undefined
+          avatarUrl: user_metadata?.avatar_url || undefined
         });
-      }
-
-      if (userCredential.user) {
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        const userDoc = await getDoc(userDocRef);
         
-        if (!userDoc.exists()) {
-          // New user, create profile
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            email: userCredential.user.email,
-            username: userCredential.user.displayName || userCredential.user.email?.split('@')[0] || 'User',
-            avatarUrl: userCredential.user.photoURL || undefined,
-            createdAt: serverTimestamp(),
-          });
-          
-          // Add sample data for new users
-          await createDefaultLibraryForNewUser(userCredential.user.uid);
-        }
+        // Add sample data for new users
+        await createDefaultLibraryForNewUser(data.user.id);
       }
 
       return {
-        uid: userCredential.user?.uid || '',
-        email: userCredential.user?.email || '',
-        displayName: userCredential.user?.displayName || '',
-        photoURL: userCredential.user?.photoURL || '',
-        username: userCredential.user?.displayName || userCredential.user?.email?.split('@')[0] || 'User'
+        uid: data.user.id,
+        email: data.user.email || '',
+        displayName: data.user.user_metadata?.name || '',
+        photoURL: data.user.user_metadata?.avatar_url || '',
+        username: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User'
       };
     } catch (signInError) {
       console.error('Error during Google Sign-In process:', signInError);
@@ -153,7 +150,8 @@ export const loginWithGoogle = async (): Promise<UserData> => {
 // Send password reset email
 export const resetPassword = async (email: string): Promise<void> => {
   try {
-    await sendPasswordResetEmail(auth, email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
   } catch (error) {
     console.error('Error sending password reset email:', error);
     throw error;
@@ -163,21 +161,27 @@ export const resetPassword = async (email: string): Promise<void> => {
 // Sign out
 export const logout = async (): Promise<void> => {
   try {
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   } catch (error) {
     console.error('Error signing out:', error);
     throw error;
   }
 };
 
-// Check if user document exists in Firestore
+// Check if user document exists in Supabase
 export const checkUserExists = async (userId: string): Promise<boolean> => {
-  console.log(`Checking if user exists in Firestore: ${userId}`);
+  console.log(`Checking if user exists in Supabase: ${userId}`);
   try {
-    const userDocRef = doc(db, 'users', userId);
-    console.log(`Getting document reference for user: ${userId}`);
-    const userDoc = await getDoc(userDocRef);
-    const exists = userDoc.exists();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    const exists = !!data;
     console.log(`User document exists: ${exists}`);
     return exists;
   } catch (error) {
@@ -186,24 +190,29 @@ export const checkUserExists = async (userId: string): Promise<boolean> => {
   }
 };
 
-// Create user document in Firestore
+// Create user document in Supabase
 export const createUserDocument = async (
   userId: string,
   userData: { email: string; username: string; avatarUrl?: string }
 ): Promise<boolean> => {
   console.log('Creating user document for:', userId, userData);
   
-  // Convert undefined avatarUrl to null or remove it from the object
-  const sanitizedUserData = {
-    ...userData,
-    // Either set to null
-    avatarUrl: userData.avatarUrl || null,
-    // Or use this approach to remove the field if undefined
-    // ...(userData.avatarUrl ? { avatarUrl: userData.avatarUrl } : {})
-  };
-  
   try {
-    await setDoc(doc(db, 'users', userId), sanitizedUserData);
+    const { error } = await supabase
+      .from('users')
+      .insert([
+        {
+          id: userId,
+          email: userData.email,
+          username: userData.username,
+          avatar_url: userData.avatarUrl || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]);
+    
+    if (error) throw error;
+    
     console.log('User document created successfully');
     return true;
   } catch (error) {
@@ -212,23 +221,28 @@ export const createUserDocument = async (
   }
 };
 
-// Get user data from Firestore with offline handling
+// Get user data from Supabase with offline handling
 export const getUserData = async (userId: string): Promise<User | null> => {
   try {
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as Omit<User, 'uid'>;
+    if (error) throw error;
+
+    if (data) {
       return {
-        uid: userId,
-        ...userData,
-        createdAt: userData.createdAt instanceof Date
-          ? userData.createdAt
-          : (userData.createdAt as any)?.toDate?.() ? new Date((userData.createdAt as any).toDate()) : new Date(),
-        updatedAt: userData.updatedAt instanceof Date
-          ? userData.updatedAt
-          : (userData.updatedAt as any)?.toDate?.() ? new Date((userData.updatedAt as any).toDate()) : new Date()
+        uid: data.id,
+        username: data.username,
+        email: data.email,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+        preferences: data.preferences || {
+          theme: 'light',
+          notificationsEnabled: true
+        }
       };
     }
     return null;
@@ -254,28 +268,28 @@ export const getUserData = async (userId: string): Promise<User | null> => {
 
 // Auth state listener with better error handling and forced navigation
 export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
-  return onAuthStateChanged(auth, async (firebaseUser) => {
+  return supabase.auth.onAuthStateChange(async (event, session) => {
     try {
-      if (firebaseUser) {
-        console.log('Firebase user authenticated:', firebaseUser.uid);
+      if (session?.user) {
+        console.log('Supabase user authenticated:', session.user.id);
         
-        // Check if user document exists in Firestore
+        // Check if user document exists in Supabase
         let userExists = false;
         try {
-          userExists = await checkUserExists(firebaseUser.uid);
+          userExists = await checkUserExists(session.user.id);
         } catch (error) {
           console.error('Error checking if user exists:', error);
         }
         
-        // If user doesn't exist in Firestore, create a new document
+        // If user doesn't exist in Supabase, create a new document
         if (!userExists) {
-          console.log('Creating new user document for:', firebaseUser.uid);
+          console.log('Creating new user document for:', session.user.id);
           try {
-            const { displayName, email, photoURL } = firebaseUser;
-            await createUserDocument(firebaseUser.uid, {
-              username: displayName || email?.split('@')[0] || 'User',
+            const { user_metadata, email } = session.user;
+            await createUserDocument(session.user.id, {
+              username: user_metadata?.name || email?.split('@')[0] || 'User',
               email: email || '',
-              avatarUrl: photoURL || undefined
+              avatarUrl: user_metadata?.avatar_url || undefined
             });
             console.log('User document created successfully');
           } catch (error) {
@@ -285,9 +299,9 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
         
         // Create a basic user object immediately to ensure navigation happens
         const basicUser: User = {
-          uid: firebaseUser.uid,
-          username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-          email: firebaseUser.email || 'unknown@example.com',
+          uid: session.user.id,
+          username: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || 'unknown@example.com',
           createdAt: new Date(),
           updatedAt: new Date(),
           preferences: {
@@ -301,7 +315,7 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
         
         // Then try to get the full user data in the background
         try {
-          const userData = await getUserData(firebaseUser.uid);
+          const userData = await getUserData(session.user.id);
           if (userData) {
             console.log('User data retrieved successfully, updating');
             callback(userData);
@@ -311,7 +325,7 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
           // We already called callback with basicUser, so no need to do it again
         }
       } else {
-        console.log('No Firebase user, setting auth state to null');
+        console.log('No Supabase user, setting auth state to null');
         callback(null);
       }
     } catch (error) {
@@ -325,8 +339,17 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
 const createDefaultLibraryForNewUser = async (userId: string) => {
   try {
     const sampleData = require('../data/sampleData.json');
-    await setDoc(doc(db, 'users', userId, 'library', 'data'), sampleData);
+    const { error } = await supabase
+      .from('libraries')
+      .insert([
+        {
+          user_id: userId,
+          data: sampleData
+        }
+      ]);
+    
+    if (error) throw error;
   } catch (error) {
     console.error('Error creating default library:', error);
   }
-}; 
+};

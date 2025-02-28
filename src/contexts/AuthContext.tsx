@@ -21,13 +21,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     console.log('Setting up auth subscription');
-    const unsubscribe = subscribeToAuthChanges((user) => {
+    const subscription = subscribeToAuthChanges((user) => {
       console.log('Auth state changed:', user ? 'User logged in' : 'No user');
       setCurrentUser(user);
       setLoading(false);
     });
 
-    return unsubscribe;
+    // Fix the unsubscribe call
+    return () => {
+      // Use type assertion to handle the subscription object
+      const sub = subscription as any;
+      if (typeof sub.unsubscribe === 'function') {
+        sub.unsubscribe();
+      } else if (sub.data?.subscription?.unsubscribe) {
+        sub.data.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   console.log('Auth state:', { currentUser, loading });
