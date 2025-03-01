@@ -1,4 +1,4 @@
-import { User } from '../data/types';
+import { Account } from '../structs/types';
 import { supabase } from '../supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
@@ -174,7 +174,7 @@ export const checkUserExists = async (userId: string): Promise<boolean> => {
   console.log(`Checking if user exists in Supabase: ${userId}`);
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('accounts')
       .select('id')
       .eq('id', userId)
       .single();
@@ -199,15 +199,15 @@ export const createUserDocument = async (
   
   try {
     const { error } = await supabase
-      .from('users')
+      .from('accounts')
       .insert([
         {
           id: userId,
           email: userData.email,
           username: userData.username,
-          avatar_url: userData.avatarUrl || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          avatarURL: userData.avatarUrl || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         }
       ]);
     
@@ -222,10 +222,10 @@ export const createUserDocument = async (
 };
 
 // Get user data from Supabase with offline handling
-export const getUserData = async (userId: string): Promise<User | null> => {
+export const getUserData = async (userId: string): Promise<Account | null> => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('accounts')
       .select('*')
       .eq('id', userId)
       .single();
@@ -234,15 +234,12 @@ export const getUserData = async (userId: string): Promise<User | null> => {
 
     if (data) {
       return {
-        uid: data.id,
+        id: data.id,
         username: data.username,
         email: data.email,
         createdAt: new Date(data.created_at),
         updatedAt: new Date(data.updated_at),
-        preferences: data.preferences || {
-          theme: 'light',
-          notificationsEnabled: true
-        }
+        notifsEnabled: data.notifsEnabled
       };
     }
     return null;
@@ -251,15 +248,12 @@ export const getUserData = async (userId: string): Promise<User | null> => {
     // Return a basic user object when offline instead of null
     if (error instanceof Error && error.message.includes('offline')) {
       return {
-        uid: userId,
+        id: userId,
         username: 'Offline User',
         email: 'offline@example.com',
         createdAt: new Date(),
         updatedAt: new Date(),
-        preferences: {
-          theme: 'light',
-          notificationsEnabled: true
-        }
+        notifsEnabled: true
       };
     }
     return null;
@@ -267,7 +261,7 @@ export const getUserData = async (userId: string): Promise<User | null> => {
 };
 
 // Auth state listener with better error handling and forced navigation
-export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
+export const subscribeToAuthChanges = (callback: (user: Account | null) => void) => {
   return supabase.auth.onAuthStateChange(async (event, session) => {
     try {
       if (session?.user) {
@@ -289,7 +283,7 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
             await createUserDocument(session.user.id, {
               username: user_metadata?.name || email?.split('@')[0] || 'User',
               email: email || '',
-              avatarUrl: user_metadata?.avatar_url || undefined
+              avatarURL: user_metadata?.avatar_url || undefined
             });
             console.log('User document created successfully');
           } catch (error) {
@@ -298,16 +292,13 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
         }
         
         // Create a basic user object immediately to ensure navigation happens
-        const basicUser: User = {
-          uid: session.user.id,
+        const basicUser: Account = {
+          id: session.user.id,
           username: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
           email: session.user.email || 'unknown@example.com',
           createdAt: new Date(),
           updatedAt: new Date(),
-          preferences: {
-            theme: 'light',
-            notificationsEnabled: true
-          }
+          notifsEnabled: true
         };
         
         // Call the callback immediately with the basic user

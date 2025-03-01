@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { logout } from '../../services/authService';
-// import { doc, getDoc } from 'firebase/firestore';
-// import { db } from '../../firebase';
+import { logout } from '../../supabase/authService';
+import { retrieveAccount } from '../../supabase/databaseService';
 
 const HomeScreen = () => {
   const { currentUser } = useAuth();
@@ -15,17 +14,16 @@ const HomeScreen = () => {
       
       try {
         setDbStatus('checking');
-        console.log('HomeScreen: Testing database connection for user:', currentUser.uid);
+        console.log('HomeScreen: Testing database connection for user:', currentUser.id);
         
-        // Test reading the user document
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        // Test reading the user document using our retrieveAccount function
+        const userData = await retrieveAccount(currentUser.id);
         
-        if (userDoc.exists()) {
-          console.log('HomeScreen: Successfully read user document:', userDoc.data());
+        if (userData) {
+          console.log('HomeScreen: Successfully read user data:', userData);
           setDbStatus('connected');
         } else {
-          console.log('HomeScreen: User document does not exist yet');
+          console.log('HomeScreen: User data not found');
           setDbStatus('error');
         }
       } catch (error) {

@@ -14,15 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { loginWithEmail, loginWithGoogle, getUserData } from '../../services/authService';
-import { useAuth } from '../../contexts/AuthContext';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { GoogleAuthProvider, signInWithCredential } from '@firebase/auth';
-import { auth } from '../../firebase';
-
-
-// You'll need to set up Firebase auth
-// import auth from '@react-native-firebase/auth';
+import { loginWithEmail, loginWithGoogle, getUserData } from '../../supabase/authService';
 
 const LoginScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
@@ -42,7 +34,8 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
     setLoading(true);
     try {
       const userCredential = await loginWithEmail(email, password);
-      const userData = await getUserData(userCredential.user.uid);
+      // Supabase user ID is in user.id, not user.uid
+      const userData = await getUserData(userCredential.user.id);
       if (userData) {
         // setCurrentUser(userData);
       }
@@ -57,12 +50,8 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { idToken } = (await GoogleSignin.signIn()).data ?? { idToken: null };
-      if (!idToken) {
-        throw new Error('No ID token returned from Google Sign In');
-      }
-      const googleCredential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(auth, googleCredential);
+      // Use the loginWithGoogle function from authService which handles Supabase auth
+      await loginWithGoogle();
       // Navigation will be handled by the auth state listener
     } catch (error: any) {
       Alert.alert('Google Login Failed', error.message);

@@ -10,8 +10,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchUserLibrary } from '../../services/databaseService';
-import { Folder, List, Library } from '../../data/types';
+import { fetchUserLibrary } from '../../supabase/databaseService';
+import { Folder, List, Library } from '../../structs/types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const LibraryScreen = () => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { resetPassword } from '../../services/authService';
+import { resetPassword } from '../../supabase/authService';
 
 interface ForgotPasswordScreenProps {
   navigation: any;

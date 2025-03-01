@@ -1,9 +1,9 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { User } from '../data/types';
-import { subscribeToAuthChanges } from '../services/authService';
+import { Account } from '../structs/types';
+import { subscribeToAuthChanges } from '../supabase/authService';
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: Account | null;
   loading: boolean;
 }
 
@@ -16,7 +16,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

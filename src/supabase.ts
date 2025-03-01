@@ -29,6 +29,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
+
 // console.log('Supabase:', supabase);
 
 // Tells Supabase Auth to continuously refresh the session automatically

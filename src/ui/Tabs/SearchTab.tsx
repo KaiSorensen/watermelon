@@ -10,8 +10,8 @@ import {
   SafeAreaView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { searchPublicLists, copyPublicList } from '../../services/databaseService';
-import { List } from '../../data/types';
+import { searchPublicLists, copyPublicList } from '../../supabase/databaseService';
+import { List } from '../../structs/types';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SearchScreen = () => {
