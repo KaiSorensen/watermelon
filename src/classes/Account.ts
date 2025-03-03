@@ -4,17 +4,17 @@ export class Account {
     private _id: string;
     private _username: string;
     private _email: string;
-    private _avatarURL?: string;
+    private _avatarURL: string | null;
     private _createdAt: Date;
     private _updatedAt: Date;
     private _notifsEnabled: boolean;
 
-    // Public constructor to enforce factory pattern
-    public constructor(
+    // Constructor to create an Account instance
+    constructor(
         id: string,
         username: string,
         email: string,
-        avatarURL: string | undefined,
+        avatarURL: string | null,
         createdAt: Date,
         updatedAt: Date,
         notifsEnabled: boolean
@@ -59,8 +59,8 @@ export class Account {
     get email(): string { return this._email; }
     set email(value: string) { this._email = value; }
 
-    get avatarURL(): string | undefined { return this._avatarURL; }
-    set avatarURL(value: string | undefined) { this._avatarURL = value; }
+    get avatarURL(): string | null { return this._avatarURL; }
+    set avatarURL(value: string | null) { this._avatarURL = value; }
 
     get notifsEnabled(): boolean { return this._notifsEnabled; }
     set notifsEnabled(value: boolean) { this._notifsEnabled = value; }
@@ -83,7 +83,7 @@ export class Account {
         this._email = data.email;
         this._avatarURL = data.avatarURL;
         this._notifsEnabled = data.notifsEnabled;
-        this._updatedAt = data.updatedAt;
+        this._updatedAt = new Date(data.updatedAt);
     }
 }
 
