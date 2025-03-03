@@ -2,7 +2,7 @@ import { Account } from '../classes/Account';
 import { Folder } from '../classes/Folder';
 import { List } from '../classes/List';
 import { ListItem } from '../classes/Item';
-import { supabase } from '../supabase';
+import { supabase } from './supabase';
 
 export function storeUser(user: Account) {
   supabase.from('accounts').insert({
@@ -31,7 +31,7 @@ export function storeList(ownerId: string, folderId: string, list: List) {
 }
 
 
-export function storeListItem(listItem: ListItem) {
+export function storeItem(listItem: ListItem) {
   supabase.from('items').insert({
     id: listItem.id,
     title: listItem.title,
@@ -89,7 +89,7 @@ function convertRawList(data: any): List {
   );
 }
 
-function convertRawListItem(data: any): ListItem {
+function convertRawItem(data: any): ListItem {
   return new ListItem(
     data.id,
     data.listID,
@@ -107,7 +107,7 @@ export async function retrieveAccount(userId: string): Promise<Account> {
   if (error) {
     throw error;
   }
-  
+
   return Account.fromRaw(data);
 }
 
@@ -116,7 +116,7 @@ export async function retrieveFolder(folderId: string): Promise<Folder> {
   if (error) {
     throw error;
   }
-  
+
   return Folder.fromRaw(data);
 }
 
@@ -125,11 +125,11 @@ export async function retrieveList(listId: string): Promise<List> {
   if (error) {
     throw error;
   }
-  
+
   return List.fromRaw(data);
 }
 
-export async function retrieveListItem(listItemId: string): Promise<ListItem> {
+export async function retrieveItem(listItemId: string): Promise<ListItem> {
   const { data, error } = await supabase.from('items').select('*').eq('id', listItemId).single();
   if (error) {
     throw error;
@@ -149,7 +149,7 @@ export async function updateAccount(userId: string, updates: Partial<Account>): 
       updatedAt: new Date().toISOString()
     })
     .eq('id', userId);
-    
+
   if (error) {
     throw error;
   }
@@ -164,7 +164,7 @@ export async function updateFolder(folderId: string, updates: Partial<Folder>): 
       updatedAt: new Date().toISOString()
     })
     .eq('id', folderId);
-    
+
   if (error) {
     throw error;
   }
@@ -187,13 +187,13 @@ export async function updateList(listId: string, updates: Partial<List>): Promis
       updatedAt: new Date().toISOString()
     })
     .eq('id', listId);
-    
+
   if (error) {
     throw error;
   }
 }
 
-export async function updateListItem(itemId: string, updates: Partial<ListItem>): Promise<void> {
+export async function updateItem(itemId: string, updates: Partial<ListItem>): Promise<void> {
   const { error } = await supabase
     .from('items')
     .update({
@@ -204,7 +204,7 @@ export async function updateListItem(itemId: string, updates: Partial<ListItem>)
       updatedAt: new Date().toISOString()
     })
     .eq('id', itemId);
-    
+
   if (error) {
     throw error;
   }

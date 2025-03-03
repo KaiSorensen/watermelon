@@ -1,5 +1,5 @@
 import { Account } from '../classes/types';
-import { supabase } from '../supabase';
+import { supabase } from './supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
 

@@ -28,8 +28,8 @@ export class List {
     private _updatedAt: Date;
     private _settings: ListSettings;
 
-    // Private constructor to enforce factory pattern
-    private constructor(
+    // Public constructor to enforce factory pattern
+    public constructor(
         id: string,
         ownerID: string,
         folderID: string,

@@ -8,8 +8,8 @@ export class Folder {
     private _createdAt: Date;
     private _updatedAt: Date;
 
-    // Private constructor to enforce factory pattern
-    private constructor(
+    // Public constructor to enforce factory pattern
+    public constructor(
         id: string,
         userID: string,
         parentFolderID: string | null,

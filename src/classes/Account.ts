@@ -9,8 +9,8 @@ export class Account {
     private _updatedAt: Date;
     private _notifsEnabled: boolean;
 
-    // Private constructor to enforce factory pattern
-    private constructor(
+    // Public constructor to enforce factory pattern
+    public constructor(
         id: string,
         username: string,
         email: string,
