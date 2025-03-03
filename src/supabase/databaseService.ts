@@ -1,4 +1,7 @@
-import { Account, Folder, List, ListItem } from '../structs/types';
+import { Account } from '../classes/Account';
+import { Folder } from '../classes/Folder';
+import { List } from '../classes/List';
+import { ListItem } from '../classes/Item';
 import { supabase } from '../supabase';
 
 export function storeUser(user: Account) {
@@ -38,21 +41,74 @@ export function storeListItem(listItem: ListItem) {
   })
 }
 
+// Raw data conversion functions
+function convertRawAccount(data: any): Account {
+  return new Account(
+    data.id,
+    data.username,
+    data.email,
+    data.avatarURL,
+    new Date(data.createdAt),
+    new Date(data.updatedAt),
+    data.notifsEnabled
+  );
+}
+
+function convertRawFolder(data: any): Folder {
+  return new Folder(
+    data.id,
+    data.ownerID,
+    data.parentFolderID,
+    data.name,
+    new Date(data.createdAt),
+    new Date(data.updatedAt)
+  );
+}
+
+function convertRawList(data: any): List {
+  return new List(
+    data.id,
+    data.ownerID,
+    data.parentFolderID,
+    data.title,
+    data.description,
+    data.coverImageURL,
+    data.isPublic,
+    data.downloadCount,
+    data.sortOrder as "date-first" | "date-last" | "alphabetical" | "manual",
+    new Date(data.createdAt),
+    new Date(data.updatedAt),
+    {
+      today: data.today,
+      notifications: {
+        notifyOnNew: data.notifyOnNew,
+        notifyTime: data.notifyTime ? new Date(data.notifyTime) : new Date(),
+        notifyDays: data.notifyDays as "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+      }
+    }
+  );
+}
+
+function convertRawListItem(data: any): ListItem {
+  return new ListItem(
+    data.id,
+    data.listID,
+    data.title,
+    data.content,
+    data.imageURLs,
+    data.orderIndex,
+    new Date(data.createdAt),
+    new Date(data.updatedAt)
+  );
+}
+
 export async function retrieveAccount(userId: string): Promise<Account> {
   const { data, error } = await supabase.from('accounts').select('*').eq('id', userId).single();
   if (error) {
     throw error;
   }
   
-  return {
-    id: data.id,
-    username: data.username,
-    email: data.email,
-    avatarURL: data.avatarURL,
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
-    notifsEnabled: data.notifsEnabled
-  };
+  return Account.fromRaw(data);
 }
 
 export async function retrieveFolder(folderId: string): Promise<Folder> {
@@ -61,14 +117,7 @@ export async function retrieveFolder(folderId: string): Promise<Folder> {
     throw error;
   }
   
-  return {
-    id: data.id,
-    userID: data.ownerID,
-    parentFolderID: data.parentFolderID,
-    name: data.name,
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt)
-  };
+  return Folder.fromRaw(data);
 }
 
 export async function retrieveList(listId: string): Promise<List> {
@@ -77,27 +126,7 @@ export async function retrieveList(listId: string): Promise<List> {
     throw error;
   }
   
-  return {
-    id: data.id,
-    ownerID: data.ownerID,
-    folderID: data.parentFolderID,
-    title: data.title,
-    description: data.description,
-    coverImageURL: data.coverImageURL,
-    isPublic: data.isPublic,
-    downloadCount: data.downloadCount,
-    sortOrder: data.sortOrder as "date-first" | "date-last" | "alphabetical" | "manual",
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
-    settings: {
-      today: data.today,
-      notifications: {
-        notifyOnNew: data.notifyOnNew,
-        notifyTime: data.notifyTime ? new Date(data.notifyTime) : new Date(),
-        notifyDays: data.notifyDays as "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
-      }
-    }
-  };
+  return List.fromRaw(data);
 }
 
 export async function retrieveListItem(listItemId: string): Promise<ListItem> {
@@ -106,16 +135,79 @@ export async function retrieveListItem(listItemId: string): Promise<ListItem> {
     throw error;
   }
 
-  return {
-    id: data.id,
-    listID: data.listID,
-    title: data.title,
-    content: data.content,
-    imageURLs: data.imageURLs,
-    orderIndex: data.orderIndex,
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt)
-  };
+  return ListItem.fromRaw(data);
+}
+
+export async function updateAccount(userId: string, updates: Partial<Account>): Promise<void> {
+  const { error } = await supabase
+    .from('accounts')
+    .update({
+      username: updates.username,
+      email: updates.email,
+      avatarURL: updates.avatarURL,
+      notifsEnabled: updates.notifsEnabled,
+      updatedAt: new Date().toISOString()
+    })
+    .eq('id', userId);
+    
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateFolder(folderId: string, updates: Partial<Folder>): Promise<void> {
+  const { error } = await supabase
+    .from('folders')
+    .update({
+      name: updates.name,
+      parentFolderID: updates.parentFolderID,
+      updatedAt: new Date().toISOString()
+    })
+    .eq('id', folderId);
+    
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateList(listId: string, updates: Partial<List>): Promise<void> {
+  const { error } = await supabase
+    .from('lists')
+    .update({
+      title: updates.title,
+      description: updates.description,
+      coverImageURL: updates.coverImageURL,
+      isPublic: updates.isPublic,
+      downloadCount: updates.downloadCount,
+      sortOrder: updates.sortOrder,
+      today: updates.settings?.today,
+      notifyOnNew: updates.settings?.notifications.notifyOnNew,
+      notifyTime: updates.settings?.notifications.notifyTime?.toISOString(),
+      notifyDays: updates.settings?.notifications.notifyDays,
+      updatedAt: new Date().toISOString()
+    })
+    .eq('id', listId);
+    
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateListItem(itemId: string, updates: Partial<ListItem>): Promise<void> {
+  const { error } = await supabase
+    .from('items')
+    .update({
+      title: updates.title,
+      content: updates.content,
+      imageURLs: updates.imageURLs,
+      orderIndex: updates.orderIndex,
+      updatedAt: new Date().toISOString()
+    })
+    .eq('id', itemId);
+    
+  if (error) {
+    throw error;
+  }
 }
 
 

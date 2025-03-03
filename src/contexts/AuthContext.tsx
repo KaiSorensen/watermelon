@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { Account } from '../structs/types';
+import { Account } from '../classes/types';
 import { subscribeToAuthChanges } from '../supabase/authService';
 
 interface AuthContextType {

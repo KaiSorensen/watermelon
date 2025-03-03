@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { searchPublicLists, copyPublicList } from '../../supabase/databaseService';
-import { List } from '../../structs/types';
+import { List } from '../../classes/types';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SearchScreen = () => {

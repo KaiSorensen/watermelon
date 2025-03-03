@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { fetchUserLibrary } from '../../supabase/databaseService';
-import { Folder, List, Library } from '../../structs/types';
+import { Folder, List, Library } from '../../classes/types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const LibraryScreen = () => {
