@@ -66,7 +66,7 @@ This is one way to run your app — you can also build it directly from Android 
 
 Now that you have successfully run the app, let's make changes!
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
 
 When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
 
@@ -95,3 +95,116 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+# OfTheDay App
+
+## Global User Object
+
+This app uses a global User object that is accessible throughout the application via React Context. The User object contains all the user's data, including folders and lists, and is automatically populated when the user logs in.
+
+### How to Access the User Object
+
+The easiest way to access the User object is through the `useUser` hook:
+
+```typescript
+import { useUser } from '../hooks/useUser';
+
+function MyComponent() {
+  const { 
+    user,              // The User object
+    isLoading,         // Boolean indicating if user data is loading
+    isLoggedIn,        // Boolean indicating if user is logged in
+    refreshUserData,   // Function to refresh user data
+    getTodayLists,     // Function to get lists marked as "today"
+    getRootFolders,    // Function to get root folders
+    getList,           // Function to get a specific list by ID
+    getRootFolder,     // Function to get a specific root folder by ID
+    saveUser           // Function to save user changes
+  } = useUser();
+
+  // Example usage
+  const todayLists = getTodayLists();
+  const rootFolders = getRootFolders();
+  
+  // Access a specific list
+  const myList = getList('list-id');
+  
+  // Save user changes
+  const updateUsername = async () => {
+    if (user) {
+      user.username = 'New Username';
+      await saveUser();
+    }
+  };
+  
+  // Refresh user data (e.g., after creating a new list)
+  const handleRefresh = async () => {
+    await refreshUserData();
+  };
+}
+```
+
+### User Object Structure
+
+The User object has the following structure:
+
+```typescript
+class User {
+  // Properties
+  id: string;                  // User ID
+  username: string;            // Username
+  email: string;               // Email
+  avatarURL: string | null;    // Avatar URL
+  createdAt: Date;             // Creation date
+  updatedAt: Date;             // Last update date
+  notifsEnabled: boolean;      // Notifications enabled flag
+  rootFolders: Folder[];       // Root folders
+  listMap: Map<string, List>;  // Map of all lists
+
+  // Methods
+  async save(): Promise<void>;           // Save changes to database
+  async refresh(): Promise<void>;        // Refresh data from database
+  addRootFolder(folder: Folder): void;   // Add a root folder
+  removeRootFolder(folder: Folder): void; // Remove a root folder
+  addList(list: List): void;             // Add a list
+  removeList(list: List): void;          // Remove a list
+  getList(listId: string): List | undefined; // Get a list by ID
+  getRootFolder(folderId: string): Folder | undefined; // Get a root folder by ID
+  getTodayLists(): List[];               // Get lists marked as "today"
+}
+```
+
+### Authentication Context
+
+The User object is managed by the AuthContext, which handles authentication and user data loading:
+
+```typescript
+import { useAuth } from '../contexts/UserContext';
+
+function MyComponent() {
+  const { currentUser, loading, refreshUserData } = useAuth();
+  
+  // Use currentUser directly if needed
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+  
+  if (!currentUser) {
+    return <LoginScreen />;
+  }
+  
+  return <UserDashboard user={currentUser} />;
+}
+```
+
+### Data Population
+
+When a user logs in, the following happens automatically:
+
+1. Basic user data is loaded from the authentication service
+2. Lists are populated using `populateUserLists`
+3. Root folders are populated using `populateFolders`
+4. Subfolders are populated recursively
+5. List IDs are populated for each folder
+
+This ensures that the User object has all the necessary data for the application to function properly.

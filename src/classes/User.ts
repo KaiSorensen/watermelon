@@ -12,7 +12,7 @@ export class User {
 
     // these are not in User table of the database, but they get populated when logged in
     private _rootFolders: Folder[];
-    private _lists: List[];
+    private _listMap: Map<string, List>;
 
     // Constructor to create an User instance
     constructor(
@@ -33,7 +33,7 @@ export class User {
         this._notifsEnabled = notifsEnabled;
 
         this._rootFolders = [];
-        this._lists = [];
+        this._listMap = new Map<string, List>();
     }
 
     // Getters for read-only properties
@@ -57,8 +57,9 @@ export class User {
     get rootFolders(): Folder[] { return this._rootFolders; }
     set rootFolders(value: Folder[]) { this._rootFolders = value; }
 
-    get lists(): List[] { return this._lists; }
-    set lists(value: List[]) { this._lists = value; }
+    get listMap(): Map<string, List> { return this._listMap; }
+    set listMap(value: Map<string, List>) { this._listMap = value; }
+
     // Method to save changes to the database
     async save(): Promise<void> {
         await updateUser(this._id, {
@@ -73,6 +74,11 @@ export class User {
     // Method to refresh data from the database
     async refresh(): Promise<void> {
         const data = await retrieveUser(this._id);
+
+        if (data === null) {
+            throw new Error('User not found');
+        }
+
         this._username = data.username;
         this._email = data.email;
         this._avatarURL = data.avatarURL;
@@ -88,14 +94,14 @@ export class User {
     }
 
     public addList(list: List) {
-        this._lists.push(list);
+        this._listMap.set(list.id, list);
     }
     public removeList(list: List) {
-        this._lists = this._lists.filter(l => l.id !== list.id);
+        this._listMap.delete(list.id);
     }
 
     public getList(listId: string) {
-        return this._lists.find(l => l.id === listId);
+        return this._listMap.get(listId);
     }
 
     public getRootFolder(folderId: string) {
@@ -103,7 +109,7 @@ export class User {
     }
     
     public getTodayLists() {
-        return this._lists.filter(l => l.today);
+        return Array.from(this._listMap.values()).filter(l => l.today);
     }
 }
 

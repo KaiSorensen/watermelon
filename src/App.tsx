@@ -4,7 +4,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/UserContext';
 import MainNavigator from './ui/Tabs/MainNavigator';
 import LoginScreen from './ui/Login/LoginScreen';
 import RegisterScreen from './ui/Login/RegisterScreen';

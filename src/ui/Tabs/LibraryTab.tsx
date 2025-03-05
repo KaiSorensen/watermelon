@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/UserContext';
 import { fetchUserLibrary } from '../../supabase/databaseService';
 import { Folder, List, Library } from '../../classes/types';
 import Icon from 'react-native-vector-icons/MaterialIcons';

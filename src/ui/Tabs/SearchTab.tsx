@@ -12,7 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { searchPublicLists, copyPublicList } from '../../supabase/databaseService';
 import { List } from '../../classes/types';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/UserContext';
 
 const SearchScreen = () => {
   const { currentUser } = useAuth();

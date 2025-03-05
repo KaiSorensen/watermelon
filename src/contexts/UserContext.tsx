@@ -1,13 +1,19 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { Account } from '../classes/types';
+import { User } from '../classes/User';
 import { subscribeToAuthChanges } from '../supabase/authService';
+import { retrieveUser } from '../supabase/databaseService';
 
 interface AuthContextType {
-  currentUser: Account | null;
+  currentUser: User | null;
   loading: boolean;
+  refreshUserData: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ currentUser: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ 
+  currentUser: null, 
+  loading: true,
+  refreshUserData: async () => {} 
+});
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -16,8 +22,24 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<Account | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Function to refresh user data that can be called from components
+  const refreshUserData = async () => {
+    if (!currentUser) return;
+    
+    setLoading(true);
+    try {
+      // Retrieve the full user data from the database
+      const refreshedUser = await retrieveUser(currentUser.id);
+      setCurrentUser(refreshedUser);
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     console.log('Setting up auth subscription');
@@ -43,7 +65,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value = {
     currentUser,
-    loading
+    loading,
+    refreshUserData
   };
 
   return (

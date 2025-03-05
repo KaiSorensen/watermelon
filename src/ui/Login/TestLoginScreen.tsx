@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/UserContext';
 import { logout } from '../../supabase/authService';
-import { retrieveAccount } from '../../supabase/databaseService';
+import { retrieveUser } from '../../supabase/databaseService';
 
 const HomeScreen = () => {
   const { currentUser } = useAuth();
@@ -16,8 +16,8 @@ const HomeScreen = () => {
         setDbStatus('checking');
         console.log('HomeScreen: Testing database connection for user:', currentUser.id);
         
-        // Test reading the user document using our retrieveAccount function
-        const userData = await retrieveAccount(currentUser.id);
+        // Test reading the user document using our retrieveUser function
+        const userData = await retrieveUser(currentUser.id);
         
         if (userData) {
           console.log('HomeScreen: Successfully read user data:', userData);

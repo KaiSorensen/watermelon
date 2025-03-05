@@ -35,7 +35,7 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
     try {
       const userCredential = await loginWithEmail(email, password);
       // Supabase user ID is in user.id, not user.uid
-      const userData = await getUserData(userCredential.user.id);
+      const userData = await getUserData(userCredential.id);
       if (userData) {
         // setCurrentUser(userData);
       }

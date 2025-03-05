@@ -8,35 +8,36 @@ import { supabase } from './supabase';
 // ======= SINGLE STORE FUNCTIONS =======
 
 
-export function storeNewUser(user: User) {
-  supabase.from('users').insert({
+export async function storeNewUser(user: User) {
+  await supabase.from('users').insert({
     id: user.id,
     username: user.username,
     email: user.email,
-  })
+  });
+  
   // populate default data for new user
+  console.log("storing folder 1");
   const folder1 = new Folder(user.id, user.id, null, "Wisdom", new Date(), new Date());
-  storeNewFolder(folder1);
-  addListToFolder(user.id, folder1.id, "761a664b-a03b-422f-ad90-f4bef41494d5"); // quotes
+  await storeNewFolder(folder1);
+  await addListToFolder(user.id, folder1.id, "761a664b-a03b-422f-ad90-f4bef41494d5"); // quotes
 
+  console.log("storing folder 2");
   const folder2 = new Folder(user.id, user.id, null, "Notes", new Date(), new Date());
-  storeNewFolder(folder2);
-  addListToFolder(user.id, folder2.id, "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff"); //poems
-  addListToFolder(user.id, folder2.id, "2ba759e5-ec09-431d-b086-838a7e645c7f"); // insights
+  await storeNewFolder(folder2);
+  await addListToFolder(user.id, folder2.id, "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff"); //poems
+  await addListToFolder(user.id, folder2.id, "2ba759e5-ec09-431d-b086-838a7e645c7f"); // insights
 }
 
-export function storeNewFolder(folder: Folder) {
-  supabase.from('folders').insert({
-    id: folder.id,
+export async function storeNewFolder(folder: Folder) {
+  await supabase.from('folders').insert({
     name: folder.name,
     ownerID: folder.ownerID,
     parentFolderID: folder.parentFolderID
-  })
+  });
 }
 
-export function storeNewList(list: List) {
-  supabase.from('lists').insert({
-    id: list.id,
+export async function storeNewList(list: List) {
+  await supabase.from('lists').insert({
     title: list.title,
     ownerID: list.ownerID,
     description: list.description,
@@ -47,34 +48,52 @@ export function storeNewList(list: List) {
     notifyOnNew: list.notifyOnNew,
     notifyTime: list.notifyTime?.toISOString(),
     notifyDays: list.notifyDays
-  })
+  });
 }
 
-export function storeNewItem(item: Item) {
-  supabase.from('items').insert({
-    id: item.id,
+export async function storeNewItem(item: Item) {
+  await supabase.from('items').insert({
     listID: item.listID,
     ownerID: item.ownerID,
     title: item.title,
     content: item.content,
     imageURLs: item.imageURLs,
     orderIndex: item.orderIndex
-  })
+  });
 }
 
 
 // ======= SINGLE RETRIEVE FUNCTIONS =======
 
 
-export async function retrieveUser(userId: string): Promise<User> {
-  const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
-  if (error) {
-    throw error;
+export async function retrieveUser(userId: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+    if (error) {
+      console.error('Error retrieving user from database:', error);
+      return null;
+    }
+
+    if (data === null) {
+      console.log('User not found in database:', userId);
+      return null;
+    }
+
+    const user = new User(data.id, data.username, data.email, data.avatarURL, data.createdAt, data.updatedAt, data.notifsEnabled);
+    
+    try {
+      // Try to populate the user's library, but don't fail if it doesn't work
+      await populateLibrary(user);
+    } catch (libraryError) {
+      console.error('Error populating user library:', libraryError);
+      // Continue with the basic user object even if library population fails
+    }
+    
+    return user;
+  } catch (error) {
+    console.error('Unexpected error in retrieveUser:', error);
+    return null;
   }
-
-
-
-  return new User(data.id, data.username, data.email, data.avatarURL, data.createdAt, data.updatedAt, data.notifsEnabled);
 }
 
 export async function retrieveFolder(folderId: string, ownerID: string): Promise<Folder> {
@@ -127,7 +146,17 @@ export async function retrieveItem(itemId: string): Promise<Item> {
     throw error;
   }
 
-  return new Item(data.id, data.listID, data.ownerID, data.title, data.content, data.imageURLs, data.orderIndex, data.createdAt, data.updatedAt);
+  return new Item(
+    data.id,
+    data.listID,
+    data.ownerID,
+    data.title,
+    data.content,
+    data.imageURLs,
+    data.orderIndex,
+    new Date(data.createdAt),
+    new Date(data.updatedAt)
+  );
 }
 
 
@@ -242,13 +271,50 @@ export async function deleteItem(itemId: string): Promise<void> {
 
 
 export async function addListToFolder(ownerID: string, folderID: string, listID: string) {
-  const { error } = await supabase.from('folderlists').insert({
-    ownerID: ownerID,
-    folderID: folderID,
-    listID: listID
-  });
-  if (error) {
-    throw error;
+  try {
+    // First check if the list exists
+    const { data: listData, error: listError } = await supabase
+      .from('lists')
+      .select('id')
+      .eq('id', listID)
+      .single();
+    
+    // If the list doesn't exist, create a default list
+    if (listError || !listData) {
+      console.log(`List ${listID} doesn't exist, creating a default list`);
+      
+      // Create a default list based on the ID
+      let title = "Default List";
+      if (listID === "761a664b-a03b-422f-ad90-f4bef41494d5") {
+        title = "Quotes";
+      } else if (listID === "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff") {
+        title = "Poems";
+      } else if (listID === "2ba759e5-ec09-431d-b086-838a7e645c7f") {
+        title = "Insights";
+      }
+      
+      await supabase.from('lists').insert({
+        id: listID,
+        ownerID: ownerID,
+        title: title,
+        description: "Default list created automatically",
+        isPublic: false,
+        sortOrder: "newest"
+      });
+    }
+    
+    // Now add the list to the folder
+    const { error } = await supabase.from('folderlists').insert({
+      ownerID: ownerID,
+      folderID: folderID,
+      listID: listID
+    });
+    
+    if (error) {
+      console.error('Error adding list to folder:', error);
+    }
+  } catch (error) {
+    console.error('Unexpected error in addListToFolder:', error);
   }
 }
 export async function removeListFromFolder(ownerID: string, folderID: string, listID: string) {
@@ -262,14 +328,61 @@ export async function removeListFromFolder(ownerID: string, folderID: string, li
 // ======= LIBRARY FUNCTIONS =======
 
 
-export async function populateUserLists(user: User) {
-  const { data, error } = await supabase.from('lists').select('*').eq('ownerID', user.id);
-  if (error) {
-    throw error;
+export async function populateLibrary(user: User) {
+  try {
+    await populateFolders(user);
+  } catch (folderError) {
+    console.error('Error populating folders:', folderError);
+    // Initialize empty folders to prevent null references
+    user.rootFolders = [];
   }
+  
+  try {
+    await populateUserLists(user);
+  } catch (listsError) {
+    console.error('Error populating user lists:', listsError);
+    // Initialize empty list map to prevent null references
+    user.listMap = new Map();
+  }
+}
 
-  const lists = data.map((list) => new List(list.id, list.ownerID, list.title, list.description, list.coverImageURL, list.isPublic, list.sortOrder, list.createdAt, list.updatedAt, list.today, list.notifyOnNew, list.notifyTime, list.notifyDays));
-  user.lists = lists;
+export async function populateUserLists(user: User) {
+  try {
+    const { data, error } = await supabase.from('folderlists').select('listID').eq('ownerID', user.id);
+
+    if (error) {
+      console.error('Error fetching user lists:', error);
+      user.listMap = new Map();
+      return;
+    }
+
+    const listIDs = data.map((list) => list.listID);
+    const lists: List[] = [];
+    for (const listID of listIDs) {
+      const { data: listData, error: listError } = await supabase.from('lists').select('*').eq('id', listID).single();
+      if (listError) {
+        console.error('Error fetching user lists:', listError);
+        user.listMap = new Map();
+        return;
+      }
+      lists.push(new List(listData.id, listData.ownerID, listData.title, listData.description, listData.coverImageURL, listData.isPublic, listData.sortOrder, listData.createdAt, listData.updatedAt, listData.today, listData.notifyOnNew, listData.notifyTime, listData.notifyDays));
+    }
+    
+
+    for (const listID of listIDs) {
+      const { data: listData, error: listError } = await supabase.from('lists').select('*').eq('id', listID).single();
+      if (listError) {
+        console.error('Error fetching user lists:', listError);
+        user.listMap = new Map();
+        return;
+      }
+    }
+
+    user.listMap = new Map(lists.map((list) => [list.id, list]));
+  } catch (error) {
+    console.error('Unexpected error in populateUserLists:', error);
+    user.listMap = new Map();
+  }
 }
 
 export async function populateFoldersListIDs(folder: Folder) {
@@ -282,17 +395,35 @@ export async function populateFoldersListIDs(folder: Folder) {
 }
 
 export async function populateFolders(user: User) {
-  const { data, error } = await supabase.from('folders').select('*').eq('ownerID', user.id).eq('parentFolderID', null);
-  if (error) {
-    throw error;
-  }
+  try {
+    const { data, error } = await supabase.from('folders').select('*').eq('ownerID', user.id).eq('parentFolderID', null);
+    if (error) {
+      console.error('Error fetching root folders:', error);
+      user.rootFolders = [];
+      return;
+    }
 
-  const folders = data.map((folder) => new Folder(folder.id, folder.ownerID, folder.parentFolderID, folder.name, folder.createdAt, folder.updatedAt));
-  user.rootFolders = folders;
+    const folders = data.map((folder) => new Folder(folder.id, folder.ownerID, folder.parentFolderID, folder.name, folder.createdAt, folder.updatedAt));
+    user.rootFolders = folders;
 
-  for (const folder of user.rootFolders) {
-    await populateFoldersListIDs(folder);
-    await populateSubFolders(folder);
+    for (const folder of user.rootFolders) {
+      try {
+        await populateFoldersListIDs(folder);
+      } catch (error) {
+        console.error(`Error populating folder lists for folder ${folder.id}:`, error);
+        folder.listsIDs = [];
+      }
+      
+      try {
+        await populateSubFolders(folder);
+      } catch (error) {
+        console.error(`Error populating subfolders for folder ${folder.id}:`, error);
+        folder.subFolders = [];
+      }
+    }
+  } catch (error) {
+    console.error('Unexpected error in populateFolders:', error);
+    user.rootFolders = [];
   }
 }
 
@@ -331,21 +462,187 @@ export async function populateSubFolders(folder: Folder) {
 
 
 
+ // ====== SEARCH FUNCTIONS ======
 
 
-// == SEARCH FUNCTIONS == given a user and a substring
-// getPublicListsBySubstring
-// getUserItemsBySubstring
+/**
+ * Search for public lists by substring in title
+ * @param substring The substring to search for
+ * @returns Array of List objects matching the search criteria
+ */
+export async function getPublicListsBySubstring(substring: string): Promise<List[]> {
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*')
+    .eq('isPublic', true)
+    .ilike('title', `%${substring}%`);
+  
+  if (error) {
+    throw error;
+  }
 
-// == TODAY FUNCTIONS == given a user
-// getTodayListsForUser
-// getTodayItemsForUser
-// getNextItemForUser
-// getPreviousItemForUser
+  return data.map((list) => new List(
+    list.id, 
+    list.ownerID, 
+    list.title, 
+    list.description, 
+    list.coverImageURL, 
+    list.isPublic, 
+    list.sortOrder, 
+    new Date(list.createdAt), 
+    new Date(list.updatedAt), 
+    list.today, 
+    list.notifyOnNew, 
+    list.notifyTime ? new Date(list.notifyTime) : null, 
+    list.notifyDays
+  ));
+}
 
-// == LIST VIEW FUNCTIONS == given a list
-// getItemsInList 
-// getItemBySubstring  (maybe this is within the class)
+/**
+ * Search for items in a user's lists by substring in title or description
+ * @param userId The user ID
+ * @param substring The substring to search for
+ * @returns Array of Item objects matching the search criteria
+ */
+export async function getUserItemsBySubstring(userId: string, substring: string): Promise<Item[]> {
+  // First get all lists owned by the user
+  const { data: userLists, error: listsError } = await supabase
+    .from('lists')
+    .select('id')
+    .eq('ownerID', userId);
+  
+  if (listsError) {
+    throw listsError;
+  }
+
+  if (!userLists.length) {
+    return [];
+  }
+
+  // Then search for items in those lists
+  const listIds = userLists.map(list => list.id);
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .in('listID', listIds)
+    .or(`title.ilike.%${substring}%, description.ilike.%${substring}%`);
+  
+  if (error) {
+    throw error;
+  }
+
+  return data.map((item) => new Item(
+    item.id,
+    item.listID,
+    item.ownerID,
+    item.title,
+    item.content,
+    item.imageURLs,
+    item.orderIndex,
+    new Date(item.createdAt),
+    new Date(item.updatedAt)
+  ));
+}
+
+/**
+ * Get all lists marked as "today" for a user
+ * @param userId The user ID
+ * @returns Array of List objects marked as today
+ */
+export async function getTodayListsForUser(userId: string): Promise<List[]> {
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*')
+    .eq('ownerID', userId)
+    .eq('today', true);
+  
+  if (error) {
+    throw error;
+  }
+
+  return data.map((list) => new List(
+    list.id, 
+    list.ownerID, 
+    list.title, 
+    list.description, 
+    list.coverImageURL, 
+    list.isPublic, 
+    list.sortOrder, 
+    new Date(list.createdAt), 
+    new Date(list.updatedAt), 
+    list.today, 
+    list.notifyOnNew, 
+    list.notifyTime ? new Date(list.notifyTime) : null, 
+    list.notifyDays
+  ));
+}
+
+/**
+ * Get all items in lists marked as "today" for a user
+ * @param userId The user ID
+ * @returns Array of Item objects from today lists
+ */
+export async function getTodayItemsForUser(userId: string): Promise<Item[]> {
+  // First get all lists marked as today
+  const todayLists = await getTodayListsForUser(userId);
+  
+  if (!todayLists.length) {
+    return [];
+  }
+
+  // Then get all items from those lists
+  const listIds = todayLists.map(list => list.id);
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .in('listID', listIds)
+    .order('position', { ascending: true });
+  
+  if (error) {
+    throw error;
+  }
+
+  return data.map((item) => new Item(
+    item.id,
+    item.listID,
+    item.ownerID,
+    item.title,
+    item.content,
+    item.imageURLs,
+    item.orderIndex,
+    new Date(item.createdAt),
+    new Date(item.updatedAt)
+  ));
+}
+
+/**
+ * Get all items in a specific list
+ * @param listId The list ID
+ * @returns Array of Item objects in the list
+ */
+export async function getItemsInList(listId: string): Promise<Item[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .eq('listID', listId)
+    .order('position', { ascending: true });
+  
+  if (error) {
+    throw error;
+  }
+
+  return data.map((item) => new Item(
+    item.id,
+    item.listID,
+    item.ownerID,
+    item.title,
+    item.content,
+    item.imageURLs,
+    item.orderIndex,
+    new Date(item.createdAt),
+    new Date(item.updatedAt)
+  ));
+}
 
 
 
