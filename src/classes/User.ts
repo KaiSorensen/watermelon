@@ -1,6 +1,7 @@
-import { retrieveAccount, updateAccount } from '../supabase/databaseService';
-
-export class Account {
+import { retrieveUser, updateUser } from '../supabase/databaseService';
+import { Folder } from './Folder';
+import { List } from './List';
+export class User {
     private _id: string;
     private _username: string;
     private _email: string;
@@ -9,7 +10,11 @@ export class Account {
     private _updatedAt: Date;
     private _notifsEnabled: boolean;
 
-    // Constructor to create an Account instance
+    // these are not in User table of the database, but they get populated when logged in
+    private _rootFolders: Folder[];
+    private _lists: List[];
+
+    // Constructor to create an User instance
     constructor(
         id: string,
         username: string,
@@ -26,25 +31,9 @@ export class Account {
         this._createdAt = createdAt;
         this._updatedAt = updatedAt;
         this._notifsEnabled = notifsEnabled;
-    }
 
-    // Factory method to create an Account instance from database data
-    static async fromId(id: string): Promise<Account> {
-        const data = await retrieveAccount(id);
-        return Account.fromRaw(data);
-    }
-
-    // Factory method to create an Account instance from raw data
-    static fromRaw(data: any): Account {
-        return new Account(
-            data.id,
-            data.username,
-            data.email,
-            data.avatarURL,
-            new Date(data.createdAt),
-            new Date(data.updatedAt),
-            data.notifsEnabled
-        );
+        this._rootFolders = [];
+        this._lists = [];
     }
 
     // Getters for read-only properties
@@ -65,9 +54,14 @@ export class Account {
     get notifsEnabled(): boolean { return this._notifsEnabled; }
     set notifsEnabled(value: boolean) { this._notifsEnabled = value; }
 
+    get rootFolders(): Folder[] { return this._rootFolders; }
+    set rootFolders(value: Folder[]) { this._rootFolders = value; }
+
+    get lists(): List[] { return this._lists; }
+    set lists(value: List[]) { this._lists = value; }
     // Method to save changes to the database
     async save(): Promise<void> {
-        await updateAccount(this._id, {
+        await updateUser(this._id, {
             username: this._username,
             email: this._email,
             avatarURL: this._avatarURL,
@@ -78,12 +72,38 @@ export class Account {
 
     // Method to refresh data from the database
     async refresh(): Promise<void> {
-        const data = await retrieveAccount(this._id);
+        const data = await retrieveUser(this._id);
         this._username = data.username;
         this._email = data.email;
         this._avatarURL = data.avatarURL;
         this._notifsEnabled = data.notifsEnabled;
         this._updatedAt = new Date(data.updatedAt);
+    }
+
+    public addRootFolder(folder: Folder) {
+        this._rootFolders.push(folder);
+    }
+    public removeRootFolder(folder: Folder) {
+        this._rootFolders = this._rootFolders.filter(f => f.id !== folder.id);
+    }
+
+    public addList(list: List) {
+        this._lists.push(list);
+    }
+    public removeList(list: List) {
+        this._lists = this._lists.filter(l => l.id !== list.id);
+    }
+
+    public getList(listId: string) {
+        return this._lists.find(l => l.id === listId);
+    }
+
+    public getRootFolder(folderId: string) {
+        return this._rootFolders.find(f => f.id === folderId);
+    }
+    
+    public getTodayLists() {
+        return this._lists.filter(l => l.today);
     }
 }
 

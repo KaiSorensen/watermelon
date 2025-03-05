@@ -1,4 +1,5 @@
 import { retrieveFolder, updateFolder } from '../supabase/databaseService';
+import { List } from './List';
 
 export class Folder {
     private _id: string;
@@ -7,6 +8,10 @@ export class Folder {
     private _name: string;
     private _createdAt: Date;
     private _updatedAt: Date;
+
+    // these are not in Folder table of the database, but they get populated when logged in
+    private _subFolders: Folder[];
+    private _listsIDs: string[]; // ids, because the User object contains the List objects for less complicated lookups for Today tab
 
     // Constructor to create a Folder instance
     constructor(
@@ -23,6 +28,9 @@ export class Folder {
         this._name = name;
         this._createdAt = createdAt;
         this._updatedAt = updatedAt;
+
+        this._subFolders = [];
+        this._listsIDs = [];
     }
 
     // Factory method to create a Folder instance from database data
@@ -63,6 +71,12 @@ export class Folder {
 
     get name(): string { return this._name; }
     set name(value: string) { this._name = value; }
+
+    get subFolders(): Folder[] { return this._subFolders; }
+    set subFolders(value: Folder[]) { this._subFolders = value; }
+
+    get listsIDs(): string[] { return this._listsIDs; }
+    set listsIDs(value: string[]) { this._listsIDs = value; }
 
     // Method to save changes to the database
     async save(): Promise<void> {
