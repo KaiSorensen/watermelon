@@ -1,9 +1,31 @@
+import 'react-native-get-random-values';
 import { User } from '../classes/User';
 import { Folder } from '../classes/Folder';
 import { List } from '../classes/List';
 import { Item } from '../classes/Item';
 import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 
+// Fallback UUID generator in case the standard one fails
+function generateFallbackUUID() {
+  // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  // Where y is 8, 9, a, or b
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Safe UUID generator that tries the standard method first, then falls back
+function safeUUID() {
+  try {
+    return uuidv4();
+  } catch (error) {
+    console.warn('Standard UUID generation failed, using fallback method:', error);
+    return generateFallbackUUID();
+  }
+}
 
 // ======= SINGLE STORE FUNCTIONS =======
 
@@ -17,19 +39,24 @@ export async function storeNewUser(user: User) {
   
   // populate default data for new user
   console.log("storing folder 1");
-  const folder1 = new Folder(user.id, user.id, null, "Wisdom", new Date(), new Date());
-  await storeNewFolder(folder1);
-  await addListToFolder(user.id, folder1.id, "761a664b-a03b-422f-ad90-f4bef41494d5"); // quotes
+  const folder1 = new Folder(safeUUID(), user.id, null, "Wisdom", new Date(), new Date());
+  await storeNewFolder(folder1).then(async () => {
+    await addListToFolder(user.id, folder1.id, "761a664b-a03b-422f-ad90-f4bef41494d5"); // quotes
+  });
+  console.log("folder 1 stored");
 
   console.log("storing folder 2");
-  const folder2 = new Folder(user.id, user.id, null, "Notes", new Date(), new Date());
-  await storeNewFolder(folder2);
-  await addListToFolder(user.id, folder2.id, "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff"); //poems
-  await addListToFolder(user.id, folder2.id, "2ba759e5-ec09-431d-b086-838a7e645c7f"); // insights
+  const folder2 = new Folder(safeUUID(), user.id, null, "Notes", new Date(), new Date());
+  await storeNewFolder(folder2).then(async () => {
+    await addListToFolder(user.id, folder2.id, "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff"); //poems
+    await addListToFolder(user.id, folder2.id, "2ba759e5-ec09-431d-b086-838a7e645c7f"); // insights
+  });
+  console.log("folder 2 stored");
 }
 
 export async function storeNewFolder(folder: Folder) {
   await supabase.from('folders').insert({
+    id: folder.id,
     name: folder.name,
     ownerID: folder.ownerID,
     parentFolderID: folder.parentFolderID

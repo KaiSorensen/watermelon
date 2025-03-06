@@ -2,7 +2,7 @@ import { User } from '../classes/User';
 import { supabase } from './supabase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Config from 'react-native-config';
-import { storeNewUser, retrieveUser } from './databaseService';
+import { storeNewUser, retrieveUser, deleteUser } from './databaseService';
 
 // Create a new user with email and password
 export const registerWithEmail = async (email: string, password: string, username: string): Promise<User> => {
@@ -311,4 +311,27 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
       callback(null);
     }
   });
+};
+
+// Delete user account
+export const deleteUserAccount = async (): Promise<void> => {
+  try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('No user is currently logged in');
+    }
+    
+    // Delete the user from the database
+    await deleteUser(user.id);
+    
+    // Sign out after deletion
+    await supabase.auth.signOut();
+    
+    console.log('User account deleted successfully');
+  } catch (error) {
+    console.error('Error deleting user account:', error);
+    throw error;
+  }
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
-import { logout } from '../../supabase/authService';
+import { logout, deleteUserAccount } from '../../supabase/authService';
 import { retrieveUser } from '../../supabase/databaseService';
 
 const HomeScreen = () => {
@@ -44,6 +44,32 @@ const HomeScreen = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteUserAccount();
+              // Auth state listener will handle navigation
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert("Error", "Failed to delete account. Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.welcome}>Welcome, {currentUser?.username || 'User'}!</Text>
@@ -65,6 +91,10 @@ const HomeScreen = () => {
       
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
     </View>
   );
@@ -112,8 +142,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
+    marginBottom: 15,
   },
   logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: '#D32F2F',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+  },
+  deleteText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
