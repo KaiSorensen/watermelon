@@ -38,7 +38,15 @@ export const registerWithEmail = async (email: string, password: string, usernam
       // Store the new user in the database (this will create default data)
       await storeNewUser(newUser);
       console.log('User data stored in database successfully');
-      return newUser;
+      
+      // After storing the user and creating default data, retrieve the complete user data
+      const completeUser = await retrieveUser(data.user.id);
+      if (completeUser === null) {
+        console.warn('Could not retrieve complete user data after registration, using basic user object');
+        return newUser;
+      }
+      
+      return completeUser;
     } catch (dbError) {
       console.error('Error storing user in database:', dbError);
       // Still return the user even if database storage fails
@@ -141,7 +149,15 @@ export const loginWithGoogle = async (): Promise<User> => {
           try {
             await storeNewUser(newUser);
             console.log('User data stored in database successfully');
-            return newUser;
+            
+            // After storing the user and creating default data, retrieve the complete user data
+            const completeUser = await retrieveUser(data.user.id);
+            if (completeUser === null) {
+              console.warn('Could not retrieve complete user data after Google registration, using basic user object');
+              return newUser;
+            }
+            
+            return completeUser;
           } catch (storeError) {
             console.error('Error storing user in database:', storeError);
             // Still return the user even if database storage fails
@@ -159,10 +175,19 @@ export const loginWithGoogle = async (): Promise<User> => {
         try {
           await storeNewUser(newUser);
           console.log('User data stored in database successfully after retrieval error');
+          
+          // After storing the user and creating default data, retrieve the complete user data
+          const completeUser = await retrieveUser(data.user.id);
+          if (completeUser === null) {
+            console.warn('Could not retrieve complete user data after Google registration (retrieval error path), using basic user object');
+            return newUser;
+          }
+          
+          return completeUser;
         } catch (storeError) {
           console.error('Error storing user in database after retrieval error:', storeError);
+          return newUser;
         }
-        return newUser;
       }
     } catch (signInError) {
       console.error('Error during Google Sign-In process:', signInError);
@@ -285,7 +310,15 @@ export const subscribeToAuthChanges = (callback: (user: User | null) => void) =>
             try {
               await storeNewUser(newUser);
               console.log('New user document created successfully');
-              callback(newUser);
+              
+              // After storing the user and creating default data, retrieve the complete user data
+              const completeUser = await retrieveUser(session.user.id);
+              if (completeUser === null) {
+                console.warn('Could not retrieve complete user data after auth state change, using basic user object');
+                callback(newUser);
+              } else {
+                callback(completeUser);
+              }
             } catch (storeError) {
               console.error('Error storing new user:', storeError);
               // Still provide the basic user object

@@ -423,7 +423,7 @@ export async function populateFoldersListIDs(folder: Folder) {
 
 export async function populateFolders(user: User) {
   try {
-    const { data, error } = await supabase.from('folders').select('*').eq('ownerID', user.id).eq('parentFolderID', null);
+    const { data, error } = await supabase.from('folders').select('*').eq('ownerID', user.id).is('parentFolderID', null);
     if (error) {
       console.error('Error fetching root folders:', error);
       user.rootFolders = [];

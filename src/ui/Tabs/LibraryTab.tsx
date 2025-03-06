@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,213 +8,193 @@ import {
   ScrollView,
   ActivityIndicator,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
-import { fetchUserLibrary } from '../../supabase/databaseService';
-import { Folder, List, Library } from '../../classes/types';
+import { Folder } from '../../classes/Folder';
+import { List } from '../../classes/List';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import UserSettingsScreen from '../PlaceholderScreens/UserSettingsScreen';
 
 const LibraryScreen = () => {
-  const { currentUser } = useAuth();
-  const [library, setLibrary] = useState<Library | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { currentUser, loading } = useAuth();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(true);
-
-  useEffect(() => {
-    const loadLibrary = async () => {
-      if (currentUser) {
-        setLoading(true);
-        try {
-          const userLibrary = await fetchUserLibrary(currentUser.uid);
-          setLibrary(userLibrary);
-
-          // By default, expand all folders
-          const folderIds = new Set<string>();
-          const addFolderIds = (folders: Folder[]) => {
-            folders.forEach(folder => {
-              folderIds.add(folder.id);
-              if (folder.folders.length > 0) {
-                addFolderIds(folder.folders);
-              }
-            });
-          };
-
-          if (userLibrary.rootFolders) {
-            addFolderIds(userLibrary.rootFolders);
-          }
-
-          setExpandedFolders(folderIds);
-        } catch (error) {
-          console.error('Error loading library:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadLibrary();
-  }, [currentUser]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderId)) {
-        newSet.delete(folderId);
-      } else {
-        newSet.add(folderId);
-      }
-      return newSet;
-    });
+    const newExpandedFolders = new Set(expandedFolders);
+    if (newExpandedFolders.has(folderId)) {
+      newExpandedFolders.delete(folderId);
+    } else {
+      newExpandedFolders.add(folderId);
+    }
+    setExpandedFolders(newExpandedFolders);
   };
 
   const toggleAllFolders = () => {
     if (allExpanded) {
+      // Collapse all folders
       setExpandedFolders(new Set());
     } else {
-      const folderIds = new Set<string>();
+      // Expand all folders
+      const newExpandedFolders = new Set<string>();
+      
       const addFolderIds = (folders: Folder[]) => {
-        folders.forEach(folder => {
-          folderIds.add(folder.id);
-          if (folder.folders.length > 0) {
-            addFolderIds(folder.folders);
+        for (const folder of folders) {
+          newExpandedFolders.add(folder.id);
+          if (folder.subFolders.length > 0) {
+            addFolderIds(folder.subFolders);
           }
-        });
+        }
       };
-
-      if (library?.rootFolders) {
-        addFolderIds(library.rootFolders);
+      
+      if (currentUser) {
+        addFolderIds(currentUser.rootFolders);
       }
-
-      setExpandedFolders(folderIds);
+      
+      setExpandedFolders(newExpandedFolders);
     }
+    
     setAllExpanded(!allExpanded);
   };
 
-  const renderListItem = (list: List, paddingLeft: number) => (
+  const renderListItem = (list: List, paddingLeft: number = 16) => (
     <TouchableOpacity
       key={list.id}
       style={[styles.listItem, { paddingLeft }]}
-      onPress={() => console.log('List pressed', list.id)}
-      onLongPress={() => console.log('Long press on list', list.id)}
-      delayLongPress={200}
     >
-      <Icon name="list" size={20} color="#4CAF50" style={styles.listIcon} />
-      <View style={styles.listInfo}>
-        <Text style={styles.listName}>{list.name}</Text>
-        {list.description && (
-          <Text style={styles.listDescription} numberOfLines={1}>
-            {list.description}
-          </Text>
-        )}
-      </View>
-      <View style={styles.listMeta}>
-        {list.isPublic && (
-          <View style={styles.publicBadge}>
-            <Icon name="public" size={14} color="#fff" />
-            <Text style={styles.publicText}>Public</Text>
+      <View style={styles.listItemContent}>
+        {list.coverImageURL ? (
+          <Image source={{ uri: list.coverImageURL }} style={styles.listCover} />
+        ) : (
+          <View style={styles.listCoverPlaceholder}>
+            <Icon name="list" size={20} color="#999" />
           </View>
         )}
-        {list.downloadCount > 0 && (
-          <View style={styles.downloadCount}>
-            <Icon name="file-download" size={14} color="#666" />
-            <Text style={styles.downloadText}>{list.downloadCount}</Text>
-          </View>
-        )}
+        <View style={styles.listInfo}>
+          <Text style={styles.listTitle}>{list.title}</Text>
+          {list.description && (
+            <Text style={styles.listDescription} numberOfLines={1}>
+              {list.description}
+            </Text>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
 
-  const renderFolderItem = useCallback((folder: Folder, level = 0) => {
-    const isExpanded = expandedFolders.has(folder.id);
+  const renderFolderItem = (folder: Folder, level: number = 0) => {
     const paddingLeft = 16 + level * 20;
+    const isExpanded = expandedFolders.has(folder.id);
 
     return (
-      <View key={folder.id} style={styles.folderContainer}>
+      <View key={folder.id}>
         <TouchableOpacity
-          style={[styles.folderHeader, { paddingLeft }]}
+          style={[styles.folderItem, { paddingLeft }]}
           onPress={() => toggleFolder(folder.id)}
-          onLongPress={() => console.log('Long press on folder', folder.id)}
-          delayLongPress={200}
         >
           <Icon
             name={isExpanded ? 'folder-open' : 'folder'}
             size={24}
-            color="#FFD700"
+            color="#FFB74D"
             style={styles.folderIcon}
           />
           <Text style={styles.folderName}>{folder.name}</Text>
           <Icon
             name={isExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
             size={24}
-            color="#888"
+            color="#999"
           />
         </TouchableOpacity>
 
         {isExpanded && (
           <View style={styles.folderContent}>
-            {folder.folders.map(subFolder =>
+            {folder.subFolders.map(subFolder =>
               renderFolderItem(subFolder, level + 1)
             )}
 
-            {folder.lists.map(list => renderListItem(list, paddingLeft))}
+            {folder.listsIDs.map(listId => {
+              const list = currentUser?.getList(listId);
+              if (list) {
+                return renderListItem(list, paddingLeft + 20);
+              }
+              return null;
+            })}
           </View>
         )}
       </View>
     );
-  }, [expandedFolders]);
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Loading your library...</Text>
-      </SafeAreaView>
-    );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.userProfile}>
-          {currentUser?.photoURL ? (
-            <Image
-              source={{ uri: currentUser.photoURL }}
-              style={styles.profileImage}
-            />
-          ) : (
-            <View style={[styles.profileImage, styles.defaultAvatar]}>
-              <Icon name="person" size={24} color="#fff" />
-            </View>
-          )}
-          <Text style={styles.username}>
-            {currentUser?.username || currentUser?.displayName || 'User'}
-          </Text>
+          <TouchableOpacity onPress={() => setShowSettings(true)}>
+            {currentUser?.avatarURL ? (
+              <Image
+                source={{ uri: currentUser.avatarURL }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.profileImagePlaceholder}>
+                <Icon name="person" size={24} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowSettings(true)}>
+            <Text style={styles.username}>
+              {currentUser?.username || 'User'}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.collapseButton}
-          onPress={toggleAllFolders}
-        >
-          <Text style={styles.collapseButtonText}>
-            {allExpanded ? 'Collapse All' : 'Expand All'}
-          </Text>
+        <TouchableOpacity onPress={toggleAllFolders} style={styles.expandButton}>
+          <Icon
+            name={allExpanded ? 'unfold-less' : 'unfold-more'}
+            size={24}
+            color="#666"
+          />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {library?.rootFolders && library.rootFolders.length > 0 ? (
-          library.rootFolders.map(folder => renderFolderItem(folder))
-        ) : (
-          <View style={styles.emptyState}>
-            <Icon name="folder" size={48} color="#ccc" />
-            <Text style={styles.emptyStateText}>No folders yet</Text>
-            <TouchableOpacity style={styles.createButton}>
-              <Text style={styles.createButtonText}>Create a folder</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text style={styles.loadingText}>Loading your library...</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.content}>
+          {currentUser?.rootFolders && currentUser.rootFolders.length > 0 ? (
+            currentUser.rootFolders.map(folder => renderFolderItem(folder))
+          ) : (
+            <View style={styles.emptyState}>
+              <Icon name="folder" size={48} color="#ccc" />
+              <Text style={styles.emptyStateText}>Your library is empty</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Create folders and lists to organize your content
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      <Modal
+        visible={showSettings}
+        animationType="slide"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowSettings(false)}>
+              <Icon name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
+            <Text style={styles.modalTitle}>User Settings</Text>
+            <View style={{ width: 24 }} />
           </View>
-        )}
-      </ScrollView>
+          <UserSettingsScreen />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -222,21 +202,16 @@ const LibraryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    backgroundColor: 'white',
   },
   userProfile: {
     flexDirection: 'row',
@@ -248,35 +223,34 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 12,
   },
+  profileImagePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   username: {
     fontSize: 16,
     fontWeight: '600',
   },
-  collapseButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-  },
-  collapseButtonText: {
-    fontSize: 14,
-    color: '#555',
+  expandButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
   },
-  folderContainer: {
-    marginBottom: 2,
-  },
-  folderHeader: {
+  folderItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingRight: 16,
-    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   folderIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   folderName: {
     flex: 1,
@@ -287,81 +261,85 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   listItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  listItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingRight: 16,
-    backgroundColor: 'white',
   },
-  listIcon: {
-    marginRight: 10,
+  listCover: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  listCoverPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   listInfo: {
     flex: 1,
   },
-  listName: {
-    fontSize: 15,
+  listTitle: {
+    fontSize: 16,
     fontWeight: '500',
   },
   listDescription: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     marginTop: 2,
   },
-  listMeta: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  publicBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4285F4',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  publicText: {
-    color: 'white',
-    fontSize: 10,
-    marginLeft: 2,
-  },
-  downloadCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  downloadText: {
-    fontSize: 12,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
     color: '#666',
-    marginLeft: 2,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    marginTop: 40,
+    padding: 32,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#888',
-    marginTop: 12,
-    marginBottom: 24,
-  },
-  createButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: '#4285F4',
-    borderRadius: 24,
-  },
-  createButtonText: {
-    color: 'white',
+    fontSize: 18,
     fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
   },
-  defaultAvatar: {
-    backgroundColor: '#ccc',
-    justifyContent: 'center',
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 

@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from './contexts/UserContext';
 import MainNavigator from './ui/Tabs/MainNavigator';
 import LoginScreen from './ui/Login/LoginScreen';
 import RegisterScreen from './ui/Login/RegisterScreen';
-import TestLoginScreen from './ui/Login/TestLoginScreen';
 // import LoadingScreen from './ui/Login/LoadingScreen';
 
 const Stack = createNativeStackNavigator();
@@ -24,7 +23,7 @@ const AppContent = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {currentUser ? ( // if user is logged in: show the main navigator; if not: show the login and register screens
-          <Stack.Screen name="Main" component={TestLoginScreen} />
+          <Stack.Screen name="Main" component={MainNavigator} />
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
