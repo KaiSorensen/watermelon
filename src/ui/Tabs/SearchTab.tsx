@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -7,111 +7,239 @@ import {
   FlatList, 
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  ScrollView,
+  Image
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { searchPublicLists, copyPublicList } from '../../supabase/databaseService';
-import { List } from '../../classes/types';
+import { 
+  getPublicListsBySubstring, 
+  getUserListsBySubstring, 
+  getUserItemsBySubstring,
+  getUsersBySubstring
+} from '../../supabase/databaseService';
+import { List } from '../../classes/List';
+import { Item } from '../../classes/Item';
+import { User } from '../../classes/User';
 import { useAuth } from '../../contexts/UserContext';
+import debounce from 'lodash.debounce';
+
+// Define filter types
+type FilterType = 'library' | 'lists' | 'items' | 'users';
+
+// Define result types for the union type
+type SearchResult = {
+  type: 'list' | 'item' | 'user';
+  data: List | Item | User;
+};
 
 const SearchScreen = () => {
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<List[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('library');
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [lastDoc, setLastDoc] = useState<any>(null);
-  const [hasMore, setHasMore] = useState(true);
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
+  // Create a debounced search function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    debounce((term: string, filter: FilterType) => {
+      if (term.trim().length > 0) {
+        performSearch(term, filter);
+      } else {
+        setResults([]);
+      }
+    }, 300),
+    [currentUser]
+  );
+
+  // Effect to trigger search when searchTerm or activeFilter changes
+  useEffect(() => {
+    debouncedSearch(searchTerm, activeFilter);
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [searchTerm, activeFilter, debouncedSearch]);
+
+  // Main search function
+  const performSearch = async (term: string, filter: FilterType) => {
+    if (!term.trim() || !currentUser) return;
     
     setLoading(true);
-    setResults([]);
-    setLastDoc(null);
-    setHasMore(true);
-    
     try {
-      const { lists, lastDoc: newLastDoc } = await searchPublicLists(searchTerm);
-      setResults(lists);
-      setLastDoc(newLastDoc);
-      setHasMore(!!newLastDoc);
+      let searchResults: SearchResult[] = [];
+
+      // Search based on the active filter
+      switch (filter) {
+        case 'library':
+          // Search both user's lists and items
+          const userLists = await getUserListsBySubstring(currentUser.id, term);
+          const userItems = await getUserItemsBySubstring(currentUser.id, term);
+          
+          // Add lists to results
+          searchResults = [
+            ...userLists.map(list => ({ type: 'list' as const, data: list })),
+            ...userItems.map(item => ({ type: 'item' as const, data: item }))
+          ];
+          
+          // If we have fewer than 10 results, also search public lists and users
+          if (searchResults.length < 10) {
+            const publicLists = await getPublicListsBySubstring(term);
+            const publicUsers = await getUsersBySubstring(term);
+            
+            // Add public results, but prioritize user's own content
+            searchResults = [
+              ...searchResults,
+              ...publicLists
+                .filter(list => !userLists.some(ul => ul.id === list.id))
+                .map(list => ({ type: 'list' as const, data: list })),
+              ...publicUsers.map(user => ({ type: 'user' as const, data: user }))
+            ];
+          }
+          break;
+          
+        case 'lists':
+          // Search user's lists first
+          const ownLists = await getUserListsBySubstring(currentUser.id, term);
+          
+          // Then search public lists
+          const allPublicLists = await getPublicListsBySubstring(term);
+          
+          // Combine results, prioritizing user's own lists
+          searchResults = [
+            ...ownLists.map(list => ({ type: 'list' as const, data: list })),
+            ...allPublicLists
+              .filter(list => !ownLists.some(ol => ol.id === list.id))
+              .map(list => ({ type: 'list' as const, data: list }))
+          ];
+          break;
+          
+        case 'items':
+          // Only search items in user's library
+          const items = await getUserItemsBySubstring(currentUser.id, term);
+          searchResults = items.map(item => ({ type: 'item' as const, data: item }));
+          break;
+          
+        case 'users':
+          // Search for users with public lists
+          const users = await getUsersBySubstring(term);
+          searchResults = users.map(user => ({ type: 'user' as const, data: user }));
+          break;
+      }
+      
+      setResults(searchResults);
     } catch (error) {
-      console.error('Error searching lists:', error);
+      console.error('Error searching:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMore = async () => {
-    if (!hasMore || loading || !lastDoc) return;
-    
-    setLoading(true);
-    
-    try {
-      const { lists, lastDoc: newLastDoc } = await searchPublicLists(searchTerm, lastDoc);
-      setResults([...results, ...lists]);
-      setLastDoc(newLastDoc);
-      setHasMore(!!newLastDoc && lists.length > 0);
-    } catch (error) {
-      console.error('Error loading more lists:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Handle filter chip selection
+  const handleFilterChange = (filter: FilterType) => {
+    setActiveFilter(filter);
   };
 
-  const handleCopyList = async (listId: string) => {
-    if (!currentUser) return;
-    
-    try {
-      // For now, we'll copy to the root (null parent folder)
-      await copyPublicList(listId, null, currentUser.uid);
-      // Show success message or navigate to the list
-    } catch (error) {
-      console.error('Error copying list:', error);
-      // Show error message
-    }
-  };
-
-  const renderListItem = ({ item }: { item: List }) => (
+  // Render different result types
+  const renderListResult = (list: List) => (
     <View style={styles.resultItem}>
+      {list.coverImageURL && (
+        <Image 
+          source={{ uri: list.coverImageURL }} 
+          style={styles.resultImage} 
+        />
+      )}
       <View style={styles.resultContent}>
-        <Text style={styles.resultTitle}>{item.name}</Text>
-        {item.description && (
+        <Text style={styles.resultTitle}>{list.title}</Text>
+        {list.description && (
           <Text style={styles.resultDescription} numberOfLines={2}>
-            {item.description}
+            {list.description}
           </Text>
         )}
         <View style={styles.resultMeta}>
-          <View style={styles.downloadCount}>
-            <Icon name="file-download" size={14} color="#666" />
-            <Text style={styles.metaText}>{item.downloadCount}</Text>
-          </View>
           <Text style={styles.metaText}>
-            {item.items.length} items
+            {list.ownerID === currentUser?.id ? 'Your list' : 'Public list'}
           </Text>
         </View>
       </View>
       <TouchableOpacity 
-        style={styles.copyButton}
-        onPress={() => handleCopyList(item.id)}
+        style={styles.actionButton}
+        onPress={() => {/* Navigate to list */}}
       >
-        <Icon name="add-circle-outline" size={24} color="#4285F4" />
+        <Icon name="arrow-forward" size={24} color="#4285F4" />
       </TouchableOpacity>
     </View>
   );
 
+  const renderItemResult = (item: Item) => (
+    <View style={styles.resultItem}>
+      <View style={styles.resultContent}>
+        <Text style={styles.resultTitle}>{item.title || 'Untitled'}</Text>
+        <Text style={styles.resultDescription} numberOfLines={2}>
+          {item.content}
+        </Text>
+        <View style={styles.resultMeta}>
+          <Text style={styles.metaText}>Item</Text>
+        </View>
+      </View>
+      <TouchableOpacity 
+        style={styles.actionButton}
+        onPress={() => {/* Navigate to item */}}
+      >
+        <Icon name="arrow-forward" size={24} color="#4285F4" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderUserResult = (user: User) => (
+    <View style={styles.resultItem}>
+      <View style={[styles.avatarContainer, { backgroundColor: user.avatarURL ? 'transparent' : '#e0e0e0' }]}>
+        {user.avatarURL ? (
+          <Image source={{ uri: user.avatarURL }} style={styles.avatar} />
+        ) : (
+          <Text style={styles.avatarText}>{user.username.charAt(0).toUpperCase()}</Text>
+        )}
+      </View>
+      <View style={styles.resultContent}>
+        <Text style={styles.resultTitle}>{user.username}</Text>
+        <Text style={styles.resultDescription}>User with public lists</Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.actionButton}
+        onPress={() => {/* Navigate to user profile */}}
+      >
+        <Icon name="arrow-forward" size={24} color="#4285F4" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Render a search result based on its type
+  const renderSearchResult = ({ item }: { item: SearchResult }) => {
+    switch (item.type) {
+      case 'list':
+        return renderListResult(item.data as List);
+      case 'item':
+        return renderItemResult(item.data as Item);
+      case 'user':
+        return renderUserResult(item.data as User);
+      default:
+        return null;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Search Bar */}
       <View style={styles.searchBar}>
         <Icon name="search" size={24} color="#888" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search for lists..."
+          placeholder="Search..."
           placeholderTextColor="#888"
           value={searchTerm}
           onChangeText={setSearchTerm}
-          onSubmitEditing={handleSearch}
           returnKeyType="search"
+          autoCapitalize="none"
         />
         {searchTerm.length > 0 && (
           <TouchableOpacity 
@@ -123,14 +251,88 @@ const SearchScreen = () => {
         )}
       </View>
 
+      {/* Filter Chips */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsContainer}
+      >
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            activeFilter === 'library' && styles.selectedChip
+          ]}
+          onPress={() => handleFilterChange('library')}
+        >
+          <Text 
+            style={[
+              styles.chipText,
+              activeFilter === 'library' && styles.selectedChipText
+            ]}
+          >
+            Library
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            activeFilter === 'lists' && styles.selectedChip
+          ]}
+          onPress={() => handleFilterChange('lists')}
+        >
+          <Text 
+            style={[
+              styles.chipText,
+              activeFilter === 'lists' && styles.selectedChipText
+            ]}
+          >
+            Lists
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            activeFilter === 'items' && styles.selectedChip
+          ]}
+          onPress={() => handleFilterChange('items')}
+        >
+          <Text 
+            style={[
+              styles.chipText,
+              activeFilter === 'items' && styles.selectedChipText
+            ]}
+          >
+            Items
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            activeFilter === 'users' && styles.selectedChip
+          ]}
+          onPress={() => handleFilterChange('users')}
+        >
+          <Text 
+            style={[
+              styles.chipText,
+              activeFilter === 'users' && styles.selectedChipText
+            ]}
+          >
+            Users
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Results or Empty State */}
       {results.length > 0 ? (
         <FlatList
           data={results}
-          renderItem={renderListItem}
-          keyExtractor={item => item.id}
+          renderItem={renderSearchResult}
+          keyExtractor={(item, index) => `${item.type}-${(item.data as any).id || index}`}
           contentContainerStyle={styles.resultsList}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.3}
           ListFooterComponent={
             loading ? (
               <ActivityIndicator style={styles.loader} color="#4285F4" />
@@ -152,7 +354,7 @@ const SearchScreen = () => {
             <>
               <Icon name="search" size={64} color="#ddd" />
               <Text style={styles.message}>
-                Search for public lists to add to your library
+                Search your library, public lists, and users
               </Text>
             </>
           )}
@@ -173,6 +375,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     margin: 16,
+    marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     shadowColor: '#000',
@@ -191,6 +394,31 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     padding: 4,
+  },
+  chipsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  chip: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 10,
+    minWidth: 80,
+    maxHeight: 40,
+    alignItems: 'center',
+  },
+  selectedChip: {
+    backgroundColor: '#3498db',
+  },
+  chipText: {
+    color: '#555',
+    fontWeight: '500',
+  },
+  selectedChipText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -219,6 +447,12 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  resultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+    marginRight: 12,
+  },
   resultContent: {
     flex: 1,
   },
@@ -236,19 +470,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  downloadCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
   metaText: {
     fontSize: 12,
     color: '#666',
     marginLeft: 4,
   },
-  copyButton: {
+  actionButton: {
     justifyContent: 'center',
-    paddingLeft: 16,
+    alignItems: 'center',
+    width: 40,
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#555',
   },
   loader: {
     marginVertical: 20,

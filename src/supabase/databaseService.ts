@@ -491,6 +491,15 @@ export async function populateSubFolders(folder: Folder) {
 
  // ====== SEARCH FUNCTIONS ======
 
+ export async function getUsersBySubstring(substring: string): Promise<User[]> {
+  const { data, error } = await supabase.from('users').select('*').ilike('username', `%${substring}%`);
+  if (error) {
+    throw error;
+  }
+  return data.map((user) => new User(user.id, user.username, user.email, user.avatarURL, user.createdAt, user.updatedAt, user.notifsEnabled));
+ }
+
+
 
 /**
  * Search for public lists by substring in title
@@ -523,6 +532,16 @@ export async function getPublicListsBySubstring(substring: string): Promise<List
     list.notifyTime ? new Date(list.notifyTime) : null, 
     list.notifyDays
   ));
+}
+
+
+
+export async function getUserListsBySubstring(userId: string, substring: string): Promise<List[]> {
+  const { data, error } = await supabase.from('lists').select('*').eq('ownerID', userId).ilike('title', `%${substring}%`);
+  if (error) {
+    throw error;
+  }
+  return data.map((list) => new List(list.id, list.ownerID, list.title, list.description, list.coverImageURL, list.isPublic, list.sortOrder, list.createdAt, list.updatedAt, list.today, list.notifyOnNew, list.notifyTime, list.notifyDays));
 }
 
 /**
@@ -570,6 +589,10 @@ export async function getUserItemsBySubstring(userId: string, substring: string)
     new Date(item.updatedAt)
   ));
 }
+
+
+
+// ====== TODAY FUNCTIONS ======
 
 /**
  * Get all lists marked as "today" for a user
