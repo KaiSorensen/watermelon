@@ -550,44 +550,32 @@ export async function getUserListsBySubstring(userId: string, substring: string)
  * @param substring The substring to search for
  * @returns Array of Item objects matching the search criteria
  */
-export async function getUserItemsBySubstring(userId: string, substring: string): Promise<Item[]> {
+export async function getLibraryItemsBySubstring(user: User, substring: string): Promise<Item[]> {
   // First get all lists owned by the user
-  const { data: userLists, error: listsError } = await supabase
-    .from('lists')
-    .select('id')
-    .eq('ownerID', userId);
-  
-  if (listsError) {
-    throw listsError;
-  }
-
-  if (!userLists.length) {
+  const libraryListIDs = Array.from(user.listMap.keys());
+  if (!libraryListIDs.length) {
     return [];
   }
 
-  // Then search for items in those lists
-  const listIds = userLists.map(list => list.id);
-  const { data, error } = await supabase
-    .from('items')
-    .select('*')
-    .in('listID', listIds)
-    .or(`title.ilike.%${substring}%, description.ilike.%${substring}%`);
-  
-  if (error) {
-    throw error;
+  var items: Item[] = [];
+
+  for (const listID of libraryListIDs) {
+    const { data: listItems, error: itemsError } = await supabase
+      .from('items')
+      .select('*')
+      .eq('listID', listID)
+      .or(`title.ilike.%${substring}%, content.ilike.%${substring}%`);
+    
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    listItems.forEach((item) => {
+      items.push(new Item(item.id, item.listID, item.ownerID, item.title, item.content, item.imageURLs, item.orderIndex, item.createdAt, item.updatedAt));
+    });
   }
 
-  return data.map((item) => new Item(
-    item.id,
-    item.listID,
-    item.ownerID,
-    item.title,
-    item.content,
-    item.imageURLs,
-    item.orderIndex,
-    new Date(item.createdAt),
-    new Date(item.updatedAt)
-  ));
+  return items;
 }
 
 
@@ -675,13 +663,13 @@ export async function getItemsInList(listId: string): Promise<Item[]> {
     .from('items')
     .select('*')
     .eq('listID', listId)
-    .order('position', { ascending: true });
+    .order('orderIndex', { ascending: true });
   
   if (error) {
     throw error;
   }
 
-  return data.map((item) => new Item(
+  const items = data.map((item) => new Item(
     item.id,
     item.listID,
     item.ownerID,
@@ -692,6 +680,8 @@ export async function getItemsInList(listId: string): Promise<Item[]> {
     new Date(item.createdAt),
     new Date(item.updatedAt)
   ));
+
+  return items;
 }
 
 

@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { 
   getPublicListsBySubstring, 
   getUserListsBySubstring, 
-  getUserItemsBySubstring,
+  getLibraryItemsBySubstring,
   getUsersBySubstring
 } from '../../supabase/databaseService';
 import { List } from '../../classes/List';
@@ -23,6 +23,7 @@ import { Item } from '../../classes/Item';
 import { User } from '../../classes/User';
 import { useAuth } from '../../contexts/UserContext';
 import debounce from 'lodash.debounce';
+import ListScreen from '../screens/ListScreen';
 
 // Define filter types
 type FilterType = 'library' | 'lists' | 'items' | 'users';
@@ -39,6 +40,7 @@ const SearchScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('library');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedList, setSelectedList] = useState<List | null>(null);
 
   // Create a debounced search function
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +76,7 @@ const SearchScreen = () => {
         case 'library':
           // Search both user's lists and items
           const userLists = await getUserListsBySubstring(currentUser.id, term);
-          const userItems = await getUserItemsBySubstring(currentUser.id, term);
+          const userItems = await getLibraryItemsBySubstring(currentUser, term);
           
           // Add lists to results
           searchResults = [
@@ -116,7 +118,7 @@ const SearchScreen = () => {
           
         case 'items':
           // Only search items in user's library
-          const items = await getUserItemsBySubstring(currentUser.id, term);
+          const items = await getLibraryItemsBySubstring(currentUser, term);
           searchResults = items.map(item => ({ type: 'item' as const, data: item }));
           break;
           
@@ -142,7 +144,10 @@ const SearchScreen = () => {
 
   // Render different result types
   const renderListResult = (list: List) => (
-    <View style={styles.resultItem}>
+    <TouchableOpacity 
+      style={styles.resultItem}
+      onPress={() => setSelectedList(list)}
+    >
       {list.coverImageURL && (
         <Image 
           source={{ uri: list.coverImageURL }} 
@@ -164,11 +169,15 @@ const SearchScreen = () => {
       </View>
       <TouchableOpacity 
         style={styles.actionButton}
-        onPress={() => {/* Navigate to list */}}
+        onPress={(e) => {
+          e.stopPropagation(); // Prevent triggering the parent onPress
+          // Navigate to list
+          setSelectedList(list);
+        }}
       >
         <Icon name="arrow-forward" size={24} color="#4285F4" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderItemResult = (item: Item) => (
@@ -226,6 +235,15 @@ const SearchScreen = () => {
         return null;
     }
   };
+
+  const handleBackFromListScreen = () => {
+    setSelectedList(null);
+  };
+
+  // Conditionally render ListScreen if a list is selected
+  if (selectedList) {
+    return <ListScreen list={selectedList} onBack={handleBackFromListScreen} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>

@@ -13,6 +13,7 @@ import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import PreviewItem from '../components/PreviewItem';
 import { useAuth } from '../../contexts/UserContext';
+import ListScreen from '../screens/ListScreen';
 
 const TodayScreen = () => {
   const { currentUser, loading } = useAuth();
@@ -20,6 +21,7 @@ const TodayScreen = () => {
   const [selectedListIndex, setSelectedListIndex] = useState<number>(0);
   const [currentItem, setCurrentItem] = useState<Item | undefined>(undefined);
   const [loadingLists, setLoadingLists] = useState<boolean>(true);
+  const [selectedListForView, setSelectedListForView] = useState<List | null>(null);
   const chipsScrollViewRef = useRef<ScrollView>(null);
   const { width } = Dimensions.get('window');
 
@@ -58,6 +60,12 @@ const TodayScreen = () => {
 
   // Handle chip selection
   const handleChipPress = (index: number) => {
+    // If the chip is already selected, open the list view
+    if (selectedListIndex === index) {
+      setSelectedListForView(todayLists[index]);
+      return;
+    }
+    
     setSelectedListIndex(index);
     // In the future, we'll fetch the today item for the selected list
     // const todayItem = todayLists[index].getTodayItem();
@@ -93,6 +101,15 @@ const TodayScreen = () => {
       handleChipPress(selectedListIndex - 1);
     }
   };
+
+  const handleBackFromListScreen = () => {
+    setSelectedListForView(null);
+  };
+
+  // Conditionally render ListScreen if a list is selected for viewing
+  if (selectedListForView) {
+    return <ListScreen list={selectedListForView} onBack={handleBackFromListScreen} />;
+  }
 
   // Show loading state while fetching user or lists
   if (loading || loadingLists) {

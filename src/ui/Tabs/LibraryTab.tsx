@@ -15,12 +15,14 @@ import { Folder } from '../../classes/Folder';
 import { List } from '../../classes/List';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import UserSettingsScreen from '../screens/UserSettingsScreen';
+import ListScreen from '../screens/ListScreen';
 
 const LibraryScreen = () => {
   const { currentUser, loading } = useAuth();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedList, setSelectedList] = useState<List | null>(null);
 
   const toggleFolder = (folderId: string) => {
     const newExpandedFolders = new Set(expandedFolders);
@@ -63,6 +65,7 @@ const LibraryScreen = () => {
     <TouchableOpacity
       key={list.id}
       style={[styles.listItem, { paddingLeft }]}
+      onPress={() => setSelectedList(list)}
     >
       <View style={styles.listItemContent}>
         {list.coverImageURL ? (
@@ -126,6 +129,14 @@ const LibraryScreen = () => {
       </View>
     );
   };
+
+  const handleBackFromListScreen = () => {
+    setSelectedList(null);
+  };
+
+  if (selectedList) {
+    return <ListScreen list={selectedList} onBack={handleBackFromListScreen} />;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -272,13 +283,13 @@ const styles = StyleSheet.create({
   listCover: {
     width: 40,
     height: 40,
-    borderRadius: 4,
+    borderRadius: 20,
     marginRight: 12,
   },
   listCoverPlaceholder: {
     width: 40,
     height: 40,
-    borderRadius: 4,
+    borderRadius: 20,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -294,7 +305,6 @@ const styles = StyleSheet.create({
   listDescription: {
     fontSize: 14,
     color: '#666',
-    marginTop: 2,
   },
   loadingContainer: {
     flex: 1,
