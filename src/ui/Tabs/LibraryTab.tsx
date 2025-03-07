@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/UserContext';
 import { Folder } from '../../classes/Folder';
 import { List } from '../../classes/List';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import UserSettingsScreen from '../PlaceholderScreens/UserSettingsScreen';
+import UserSettingsScreen from '../components/UserSettingsScreen';
 
 const LibraryScreen = () => {
   const { currentUser, loading } = useAuth();

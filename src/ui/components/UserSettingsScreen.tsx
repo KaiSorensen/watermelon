@@ -1,6 +1,6 @@
 import React from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
-import TestLoginScreen from '../Login/TestLoginScreen';
+import TestLoginScreen from '../login/TestLoginScreen';
 
 const UserSettingsScreen = () => {
   return (

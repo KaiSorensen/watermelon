@@ -5,9 +5,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './contexts/UserContext';
-import MainNavigator from './ui/Tabs/MainNavigator';
-import LoginScreen from './ui/Login/LoginScreen';
-import RegisterScreen from './ui/Login/RegisterScreen';
+import MainNavigator from './ui/tabs/MainNavigator';
+import LoginScreen from './ui/login/LoginScreen';
+import RegisterScreen from './ui/login/RegisterScreen';
 // import LoadingScreen from './ui/Login/LoadingScreen';
 
 const Stack = createNativeStackNavigator();
