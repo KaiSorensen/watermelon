@@ -11,7 +11,7 @@ import {
   ScrollView,
   Image
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { 
   getPublicListsBySubstring, 
   getUserListsBySubstring, 
@@ -24,6 +24,12 @@ import { User } from '../../classes/User';
 import { useAuth } from '../../contexts/UserContext';
 import debounce from 'lodash.debounce';
 import ListScreen from '../screens/ListScreen';
+import ItemScreen from '../screens/ItemScreen';
+
+// Helper function to strip HTML tags for plain text display
+const stripHtml = (html: string): string => {
+  return html.replace(/<[^>]*>?/gm, '');
+};
 
 // Define filter types
 type FilterType = 'library' | 'lists' | 'items' | 'users';
@@ -41,6 +47,7 @@ const SearchScreen = () => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedList, setSelectedList] = useState<List | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
   // Create a debounced search function
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,30 +182,43 @@ const SearchScreen = () => {
           setSelectedList(list);
         }}
       >
-        <Icon name="arrow-forward" size={24} color="#4285F4" />
+        <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
 
-  const renderItemResult = (item: Item) => (
-    <View style={styles.resultItem}>
-      <View style={styles.resultContent}>
-        <Text style={styles.resultTitle}>{item.title || 'Untitled'}</Text>
-        <Text style={styles.resultDescription} numberOfLines={2}>
-          {item.content}
-        </Text>
-        <View style={styles.resultMeta}>
-          <Text style={styles.metaText}>Item</Text>
-        </View>
-      </View>
+  const renderItemResult = (item: Item) => {
+    console.log('Rendering item:', item.id, item.title, item.content?.substring(0, 50));
+    return (
       <TouchableOpacity 
-        style={styles.actionButton}
-        onPress={() => {/* Navigate to item */}}
+        style={styles.resultItem}
+        onPress={() => {
+          console.log('Item pressed:', item.id);
+          setSelectedItem(item);
+        }}
       >
-        <Icon name="arrow-forward" size={24} color="#4285F4" />
+        <View style={styles.resultContent}>
+          <Text style={styles.resultTitle}>{item.title || 'Untitled'}</Text>
+          <Text style={styles.resultDescription} numberOfLines={2}>
+            {stripHtml(item.content || '')}
+          </Text>
+          <View style={styles.resultMeta}>
+            <Text style={styles.metaText}>Item</Text>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={(e) => {
+            e.stopPropagation(); // Prevent triggering the parent onPress
+            console.log('Item arrow pressed:', item.id);
+            setSelectedItem(item);
+          }}
+        >
+          <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderUserResult = (user: User) => (
     <View style={styles.resultItem}>
@@ -217,7 +237,7 @@ const SearchScreen = () => {
         style={styles.actionButton}
         onPress={() => {/* Navigate to user profile */}}
       >
-        <Icon name="arrow-forward" size={24} color="#4285F4" />
+        <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
       </TouchableOpacity>
     </View>
   );
@@ -240,16 +260,34 @@ const SearchScreen = () => {
     setSelectedList(null);
   };
 
-  // Conditionally render ListScreen if a list is selected
+  const handleBackFromItemScreen = () => {
+    setSelectedItem(null);
+  };
+
+  // If a list is selected, show the ListScreen
   if (selectedList) {
     return <ListScreen list={selectedList} onBack={handleBackFromListScreen} />;
+  }
+
+  // If an item is selected, show the ItemScreen
+  if (selectedItem) {
+    console.log('Showing ItemScreen for item:', selectedItem.id);
+    return (
+      <ItemScreen 
+        item={selectedItem} 
+        onBack={() => {
+          console.log('Back from ItemScreen');
+          setSelectedItem(null);
+        }} 
+      />
+    );
   }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Search Bar */}
       <View style={styles.searchBar}>
-        <Icon name="search" size={24} color="#888" style={styles.searchIcon} />
+        <Icon name="search-outline" size={24} color="#888" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search..."
@@ -264,7 +302,7 @@ const SearchScreen = () => {
             onPress={() => setSearchTerm('')}
             style={styles.clearButton}
           >
-            <Icon name="clear" size={20} color="#888" />
+            <Icon name="close-circle-outline" size={20} color="#888" />
           </TouchableOpacity>
         )}
       </View>
@@ -363,14 +401,14 @@ const SearchScreen = () => {
             <ActivityIndicator size="large" color="#4285F4" />
           ) : searchTerm ? (
             <>
-              <Icon name="search-off" size={64} color="#ddd" />
+              <Icon name="search-off-outline" size={64} color="#ddd" />
               <Text style={styles.message}>
                 No results found for "{searchTerm}"
               </Text>
             </>
           ) : (
             <>
-              <Icon name="search" size={64} color="#ddd" />
+              <Icon name="search-outline" size={64} color="#ddd" />
               <Text style={styles.message}>
                 Search your library, public lists, and users
               </Text>

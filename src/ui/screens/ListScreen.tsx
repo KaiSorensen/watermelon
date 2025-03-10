@@ -17,8 +17,14 @@ import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import { getItemsInList } from '../../supabase/databaseService';
 import ListImage from '../components/ListImage';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/UserContext';
+import ItemScreen from './ItemScreen';
+
+// Helper function to strip HTML tags for plain text display
+const stripHtml = (html: string): string => {
+  return html.replace(/<[^>]*>?/gm, '');
+};
 
 // Define type for sort order
 type SortOrderType = "date-first" | "date-last" | "alphabetical" | "manual";
@@ -43,7 +49,7 @@ const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, 
       >
         <Text style={styles.dropdownHeaderText}>Sort: {value}</Text>
         <Icon 
-          name={isOpen ? "arrow-drop-up" : "arrow-drop-down"} 
+          name={isOpen ? "chevron-up" : "chevron-down"} 
           size={24} 
           color="#555"
         />
@@ -91,25 +97,28 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
   
   // Local state for list properties that can be modified
-  const [isToday, setIsToday] = useState(list.today);
-  const [isPublic, setIsPublic] = useState(list.isPublic);
-  const [notifyOnNew, setNotifyOnNew] = useState(list.notifyOnNew);
-  const [sortOrder, setSortOrder] = useState<SortOrderType>(list.sortOrder);
+  const [isToday, setIsToday] = useState(list.today || false);
+  const [isPublic, setIsPublic] = useState(list.isPublic || false);
+  const [notifyOnNew, setNotifyOnNew] = useState(list.notifyOnNew || false);
+  const [sortOrder, setSortOrder] = useState<SortOrderType>(list.sortOrder as SortOrderType || "date-first");
+  const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  // Function to fetch items
+  const fetchItems = async () => {
+    setLoading(true);
+    try {
+      const listItems = await getItemsInList(list.id);
+      setItems(listItems);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Fetch items when component mounts or list changes
   useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      try {
-        const listItems = await getItemsInList(list.id);
-        setItems(listItems);
-      } catch (error) {
-        console.error('Error fetching items:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchItems();
   }, [list.id]);
 
@@ -124,10 +133,10 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     } catch (error) {
       console.error('Error saving list changes:', error);
       // Revert to original values if save fails
-      setIsToday(list.today);
-      setIsPublic(list.isPublic);
-      setNotifyOnNew(list.notifyOnNew);
-      setSortOrder(list.sortOrder);
+      setIsToday(list.today || false);
+      setIsPublic(list.isPublic || false);
+      setNotifyOnNew(list.notifyOnNew || false);
+      setSortOrder(list.sortOrder as SortOrderType || "date-first");
     }
   };
 
@@ -155,22 +164,39 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
 
   // Render an item row
   const renderItem = ({ item }: { item: Item }) => (
-    <TouchableOpacity style={styles.itemRow}>
+    <TouchableOpacity 
+      style={styles.itemRow}
+      onPress={() => setSelectedItem(item)}
+    >
       <View style={styles.itemContent}>
         <Text style={styles.itemTitle} numberOfLines={1}>
           {item.title || 'Untitled'}
         </Text>
         <Text style={styles.itemPreview} numberOfLines={2}>
-          {item.content}
+          {stripHtml(item.content)}
         </Text>
       </View>
-      <Icon name="chevron-right" size={24} color="#aaa" />
+      <Icon name="chevron-forward" size={24} color="#aaa" />
     </TouchableOpacity>
   );
 
   // Calculate header height based on screen dimensions
   const { width, height } = Dimensions.get('window');
   const headerHeight = Math.min(height * 0.4, 300);
+
+  // If an item is selected, show the ItemScreen
+  if (selectedItem) {
+    return (
+      <ItemScreen 
+        item={selectedItem} 
+        onBack={() => {
+          setSelectedItem(null);
+          // Refresh items list when returning from ItemScreen
+          fetchItems();
+        }} 
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -252,10 +278,14 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           {loading ? (
             <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
           ) : items.length > 0 ? (
-            items.map((item) => renderItem({ item }))
+            items.map((item) => (
+              <React.Fragment key={item.id}>
+                {renderItem({ item })}
+              </React.Fragment>
+            ))
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="list" size={48} color="#ddd" />
+              <Icon name="list-outline" size={48} color="#ddd" />
               <Text style={styles.emptyText}>No items in this list yet</Text>
             </View>
           )}

@@ -168,17 +168,23 @@ export async function retrieveList(ownerID: string, parentFolderID: string, list
 }
 
 export async function retrieveItem(itemId: string): Promise<Item> {
+  console.log('Retrieving item:', itemId);
   const { data, error } = await supabase.from('items').select('*').eq('id', itemId).single();
   if (error) {
+    console.error('Error retrieving item:', error);
     throw error;
   }
+
+  console.log('Retrieved item data:', data.id, data.title);
+  console.log('Content length:', data.content?.length || 0);
+  console.log('Content preview:', data.content?.substring(0, 100));
 
   return new Item(
     data.id,
     data.listID,
     data.ownerID,
     data.title,
-    data.content,
+    data.content || '', // Ensure content is never null
     data.imageURLs,
     data.orderIndex,
     new Date(data.createdAt),
@@ -245,11 +251,15 @@ export async function updateList(listId: string, updates: Partial<List>): Promis
 }
 
 export async function updateItem(itemId: string, updates: Partial<Item>): Promise<void> {
+  console.log('Updating item:', itemId);
+  console.log('Content length:', updates.content?.length || 0);
+  console.log('Content preview:', updates.content?.substring(0, 100));
+
   const { error } = await supabase
     .from('items')
     .update({
       title: updates.title,
-      content: updates.content,
+      content: updates.content || '', // Ensure content is never null
       imageURLs: updates.imageURLs,
       orderIndex: updates.orderIndex,
       updatedAt: new Date().toISOString()
@@ -257,6 +267,7 @@ export async function updateItem(itemId: string, updates: Partial<Item>): Promis
     .eq('id', itemId);
 
   if (error) {
+    console.error('Error updating item:', error);
     throw error;
   }
 }
@@ -551,12 +562,15 @@ export async function getUserListsBySubstring(userId: string, substring: string)
  * @returns Array of Item objects matching the search criteria
  */
 export async function getLibraryItemsBySubstring(user: User, substring: string): Promise<Item[]> {
+  console.log('Searching for items with substring:', substring);
   // First get all lists owned by the user
   const libraryListIDs = Array.from(user.listMap.keys());
   if (!libraryListIDs.length) {
+    console.log('No lists found for user');
     return [];
   }
 
+  console.log('Searching in lists:', libraryListIDs);
   var items: Item[] = [];
 
   for (const listID of libraryListIDs) {
@@ -567,14 +581,31 @@ export async function getLibraryItemsBySubstring(user: User, substring: string):
       .or(`title.ilike.%${substring}%, content.ilike.%${substring}%`);
     
     if (itemsError) {
+      console.error('Error searching items in list:', listID, itemsError);
       throw itemsError;
     }
 
+    console.log(`Found ${listItems.length} items in list ${listID}`);
+    
     listItems.forEach((item) => {
-      items.push(new Item(item.id, item.listID, item.ownerID, item.title, item.content, item.imageURLs, item.orderIndex, item.createdAt, item.updatedAt));
+      console.log('Search result item:', item.id, item.title);
+      console.log('Content length:', item.content?.length || 0);
+      
+      items.push(new Item(
+        item.id, 
+        item.listID, 
+        item.ownerID, 
+        item.title, 
+        item.content || '', // Ensure content is never null
+        item.imageURLs, 
+        item.orderIndex, 
+        new Date(item.createdAt), 
+        new Date(item.updatedAt)
+      ));
     });
   }
 
+  console.log(`Total items found: ${items.length}`);
   return items;
 }
 
@@ -659,6 +690,7 @@ export async function getTodayItemsForUser(userId: string): Promise<Item[]> {
  * @returns Array of Item objects in the list
  */
 export async function getItemsInList(listId: string): Promise<Item[]> {
+  console.log('Getting items in list:', listId);
   const { data, error } = await supabase
     .from('items')
     .select('*')
@@ -666,20 +698,28 @@ export async function getItemsInList(listId: string): Promise<Item[]> {
     .order('orderIndex', { ascending: true });
   
   if (error) {
+    console.error('Error getting items in list:', error);
     throw error;
   }
 
-  const items = data.map((item) => new Item(
-    item.id,
-    item.listID,
-    item.ownerID,
-    item.title,
-    item.content,
-    item.imageURLs,
-    item.orderIndex,
-    new Date(item.createdAt),
-    new Date(item.updatedAt)
-  ));
+  console.log(`Retrieved ${data.length} items from list ${listId}`);
+
+  const items = data.map((item) => {
+    console.log('Item:', item.id, item.title);
+    console.log('Content length:', item.content?.length || 0);
+    
+    return new Item(
+      item.id,
+      item.listID,
+      item.ownerID,
+      item.title,
+      item.content || '', // Ensure content is never null
+      item.imageURLs,
+      item.orderIndex,
+      new Date(item.createdAt),
+      new Date(item.updatedAt)
+    );
+  });
 
   return items;
 }

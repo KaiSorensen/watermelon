@@ -1,6 +1,5 @@
-
-
 import React from 'react';
+import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,7 +15,7 @@ const AppContent = () => {
   const { currentUser, loading } = useAuth();
 
   if (loading) {
-    return <>waiting...</>;
+    return <Text>waiting...</Text>;
   }
 
   return (

@@ -5,7 +5,7 @@ export class Item {
     private _listID: string;
     private _ownerID: string;
     private _title: string | null;
-    private _content: string;
+    private _content: string; // This will store HTML content for rich text
     private _imageURLs: string[] | null;
     private _orderIndex: number | null;
     private _createdAt: Date;
@@ -20,18 +20,18 @@ export class Item {
         content: string,
         imageURLs: string[] | null,
         orderIndex: number | null,
-        createdAt: Date,
-        updatedAt: Date
+        createdAt: Date | string,
+        updatedAt: Date | string
     ) {
         this._id = id;
         this._listID = listID;
         this._ownerID = ownerID;
         this._title = title;
-        this._content = content;
+        this._content = content || ''; // Ensure content is never null
         this._imageURLs = imageURLs;
         this._orderIndex = orderIndex;
-        this._createdAt = createdAt;
-        this._updatedAt = updatedAt;
+        this._createdAt = createdAt instanceof Date ? createdAt : new Date(createdAt);
+        this._updatedAt = updatedAt instanceof Date ? updatedAt : new Date(updatedAt);
     }
 
     // Factory method to create an Item instance from database data
@@ -47,7 +47,7 @@ export class Item {
             data.listID,
             data.ownerID,
             data.title,
-            data.content,
+            data.content || '', // Ensure content is never null
             data.imageURLs,
             data.orderIndex,
             new Date(data.createdAt),
@@ -66,8 +66,9 @@ export class Item {
     get title(): string | null { return this._title; }
     set title(value: string | null) { this._title = value; }
 
-    get content(): string { return this._content; }
-    set content(value: string) { this._content = value; }
+    // Content can now be HTML for rich text
+    get content(): string { return this._content || ''; } // Ensure content is never null
+    set content(value: string) { this._content = value || ''; } // Ensure content is never null
 
     get imageURLs(): string[] | null { return this._imageURLs; }
     set imageURLs(value: string[] | null) { this._imageURLs = value; }
@@ -77,9 +78,13 @@ export class Item {
 
     // Method to save changes to the database
     async save(): Promise<void> {
+        console.log('Saving item:', this._id, this._title);
+        console.log('Content length:', this._content?.length || 0);
+        console.log('Content preview:', this._content?.substring(0, 100));
+        
         await updateItem(this._id, {
             title: this._title,
-            content: this._content,
+            content: this._content || '', // Ensure content is never null
             imageURLs: this._imageURLs,
             orderIndex: this._orderIndex
         });
@@ -90,7 +95,7 @@ export class Item {
     async refresh(): Promise<void> {
         const data = await retrieveItem(this._id);
         this._title = data.title;
-        this._content = data.content;
+        this._content = data.content || ''; // Ensure content is never null
         this._imageURLs = data.imageURLs;
         this._orderIndex = data.orderIndex;
         this._updatedAt = new Date(data.updatedAt);

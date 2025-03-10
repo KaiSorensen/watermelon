@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../contexts/UserContext';
 import { Folder } from '../../classes/Folder';
 import { List } from '../../classes/List';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import UserSettingsScreen from '../screens/UserSettingsScreen';
 import ListScreen from '../screens/ListScreen';
 
@@ -72,7 +72,7 @@ const LibraryScreen = () => {
           <Image source={{ uri: list.coverImageURL }} style={styles.listCover} />
         ) : (
           <View style={styles.listCoverPlaceholder}>
-            <Icon name="list" size={20} color="#999" />
+            <Icon name="list-outline" size={20} color="#999" />
           </View>
         )}
         <View style={styles.listInfo}>
@@ -98,14 +98,14 @@ const LibraryScreen = () => {
           onPress={() => toggleFolder(folder.id)}
         >
           <Icon
-            name={isExpanded ? 'folder-open' : 'folder'}
+            name={isExpanded ? 'folder-open-outline' : 'folder-outline'}
             size={24}
             color="#FFB74D"
             style={styles.folderIcon}
           />
           <Text style={styles.folderName}>{folder.name}</Text>
           <Icon
-            name={isExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
+            name={isExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
             size={24}
             color="#999"
           />
@@ -120,7 +120,7 @@ const LibraryScreen = () => {
             {folder.listsIDs.map(listId => {
               const list = currentUser?.getList(listId);
               if (list) {
-                return renderListItem(list, paddingLeft + 20);
+                return <React.Fragment key={listId}>{renderListItem(list, paddingLeft + 20)}</React.Fragment>;
               }
               return null;
             })}
@@ -150,7 +150,7 @@ const LibraryScreen = () => {
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
-                <Icon name="person" size={24} color="#fff" />
+                <Icon name="person-outline" size={24} color="#fff" />
               </View>
             )}
           </TouchableOpacity>
@@ -162,7 +162,7 @@ const LibraryScreen = () => {
         </View>
         <TouchableOpacity onPress={toggleAllFolders} style={styles.expandButton}>
           <Icon
-            name={allExpanded ? 'unfold-less' : 'unfold-more'}
+            name={allExpanded ? 'contract-outline' : 'expand-outline'}
             size={24}
             color="#666"
           />
@@ -180,7 +180,7 @@ const LibraryScreen = () => {
             currentUser.rootFolders.map(folder => renderFolderItem(folder))
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="folder" size={48} color="#ccc" />
+              <Icon name="folder-outline" size={48} color="#ccc" />
               <Text style={styles.emptyStateText}>Your library is empty</Text>
               <Text style={styles.emptyStateSubtext}>
                 Create folders and lists to organize your content
