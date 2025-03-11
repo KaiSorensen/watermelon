@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Item } from '../../classes/Item';
+import { useColors } from '../../contexts/ColorContext';
 
 interface ItemScreenProps {
   item: Item;
@@ -26,6 +27,7 @@ const stripHtml = (html: string): string => {
 };
 
 const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
+  const { colors } = useColors();
   const [title, setTitle] = useState<string>(item.title || '');
   const [content, setContent] = useState<string>(stripHtml(item.content || ''));
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -104,21 +106,24 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.divider }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Icon name="arrow-back" size={24} color={colors.iconPrimary} />
         </TouchableOpacity>
         
         <View style={styles.headerRight}>
           {isSaving ? (
-            <ActivityIndicator size="small" color="#4285F4" />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             hasChanges && (
-              <TouchableOpacity onPress={saveChanges} style={styles.saveButton}>
+              <TouchableOpacity 
+                onPress={saveChanges} 
+                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              >
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             )
@@ -129,26 +134,26 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         {/* Title Input */}
         <TextInput
-          style={styles.titleInput}
+          style={[styles.titleInput, { color: colors.textPrimary }]}
           value={title}
           onChangeText={handleTitleChange}
           placeholder="Title"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.inputPlaceholder}
           multiline={false}
           maxLength={100}
           returnKeyType="next"
         />
         
         {/* Separator Line */}
-        <View style={styles.separator} />
+        <View style={[styles.separator, { backgroundColor: colors.divider }]} />
         
         {/* Content Input */}
         <TextInput
-          style={styles.contentInput}
+          style={[styles.contentInput, { color: colors.textPrimary }]}
           value={content}
           onChangeText={handleContentChange}
           placeholder="Start typing..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.inputPlaceholder}
           multiline={true}
           textAlignVertical="top"
           autoCapitalize="sentences"
@@ -162,7 +167,6 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -171,7 +175,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   scrollContainer: {
     flex: 1,
@@ -189,7 +192,6 @@ const styles = StyleSheet.create({
   saveButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#4285F4',
     borderRadius: 4,
   },
   saveButtonText: {
@@ -201,11 +203,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#333',
   },
   separator: {
     height: 1,
-    backgroundColor: '#eee',
     marginHorizontal: 16,
     marginBottom: 8,
   },
@@ -215,7 +215,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#333',
     minHeight: 300,
   },
 });

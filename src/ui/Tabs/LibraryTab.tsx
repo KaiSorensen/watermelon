@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
+import { useColors } from '../../contexts/ColorContext';
 import { Folder } from '../../classes/Folder';
 import { List } from '../../classes/List';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -19,6 +20,7 @@ import ListScreen from '../screens/ListScreen';
 
 const LibraryScreen = () => {
   const { currentUser, loading } = useAuth();
+  const { colors } = useColors();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [allExpanded, setAllExpanded] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -64,21 +66,21 @@ const LibraryScreen = () => {
   const renderListItem = (list: List, paddingLeft: number = 16) => (
     <TouchableOpacity
       key={list.id}
-      style={[styles.listItem, { paddingLeft }]}
+      style={[styles.listItem, { paddingLeft, borderBottomColor: colors.divider }]}
       onPress={() => setSelectedList(list)}
     >
       <View style={styles.listItemContent}>
         {list.coverImageURL ? (
           <Image source={{ uri: list.coverImageURL }} style={styles.listCover} />
         ) : (
-          <View style={styles.listCoverPlaceholder}>
-            <Icon name="list-outline" size={20} color="#999" />
+          <View style={[styles.listCoverPlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+            <Icon name="list-outline" size={20} color={colors.iconSecondary} />
           </View>
         )}
         <View style={styles.listInfo}>
-          <Text style={styles.listTitle}>{list.title}</Text>
+          <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
           {list.description && (
-            <Text style={styles.listDescription} numberOfLines={1}>
+            <Text style={[styles.listDescription, { color: colors.textSecondary }]} numberOfLines={1}>
               {list.description}
             </Text>
           )}
@@ -94,25 +96,25 @@ const LibraryScreen = () => {
     return (
       <View key={folder.id}>
         <TouchableOpacity
-          style={[styles.folderItem, { paddingLeft }]}
+          style={[styles.folderItem, { paddingLeft, borderBottomColor: colors.divider }]}
           onPress={() => toggleFolder(folder.id)}
         >
           <Icon
             name={isExpanded ? 'folder-open-outline' : 'folder-outline'}
             size={24}
-            color="#FFB74D"
+            color={colors.accent}
             style={styles.folderIcon}
           />
-          <Text style={styles.folderName}>{folder.name}</Text>
+          <Text style={[styles.folderName, { color: colors.textPrimary }]}>{folder.name}</Text>
           <Icon
             name={isExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
             size={24}
-            color="#999"
+            color={colors.iconSecondary}
           />
         </TouchableOpacity>
 
         {isExpanded && (
-          <View style={styles.folderContent}>
+          <View style={[styles.folderContent, { backgroundColor: colors.backgroundSecondary }]}>
             {folder.subFolders.map(subFolder =>
               renderFolderItem(subFolder, level + 1)
             )}
@@ -139,8 +141,8 @@ const LibraryScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.divider }]}>
         <View style={styles.userProfile}>
           <TouchableOpacity onPress={() => setShowSettings(true)}>
             {currentUser?.avatarURL ? (
@@ -149,13 +151,13 @@ const LibraryScreen = () => {
                 style={styles.profileImage}
               />
             ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <Icon name="person-outline" size={24} color="#fff" />
+              <View style={[styles.profileImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+                <Icon name="person-outline" size={24} color={colors.iconPrimary} />
               </View>
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowSettings(true)}>
-            <Text style={styles.username}>
+            <Text style={[styles.username, { color: colors.textPrimary }]}>
               {currentUser?.username || 'User'}
             </Text>
           </TouchableOpacity>
@@ -164,15 +166,15 @@ const LibraryScreen = () => {
           <Icon
             name={allExpanded ? 'contract-outline' : 'expand-outline'}
             size={24}
-            color="#666"
+            color={colors.iconSecondary}
           />
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading your library...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your library...</Text>
         </View>
       ) : (
         <ScrollView style={styles.content}>
@@ -180,9 +182,9 @@ const LibraryScreen = () => {
             currentUser.rootFolders.map(folder => renderFolderItem(folder))
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="folder-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>Your library is empty</Text>
-              <Text style={styles.emptyStateSubtext}>
+              <Icon name="folder-outline" size={48} color={colors.divider} />
+              <Text style={[styles.emptyStateText, { color: colors.textPrimary }]}>Your library is empty</Text>
+              <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
                 Create folders and lists to organize your content
               </Text>
             </View>
@@ -195,12 +197,12 @@ const LibraryScreen = () => {
         animationType="slide"
         onRequestClose={() => setShowSettings(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
             <TouchableOpacity onPress={() => setShowSettings(false)}>
-              <Icon name="arrow-back" size={24} color="#000" />
+              <Icon name="arrow-back" size={24} color={colors.iconPrimary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>User Settings</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>User Settings</Text>
             <View style={{ width: 24 }} />
           </View>
           <UserSettingsScreen />
@@ -213,7 +215,6 @@ const LibraryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -222,7 +223,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   userProfile: {
     flexDirection: 'row',
@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -258,7 +257,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   folderIcon: {
     marginRight: 12,
@@ -269,12 +267,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   folderContent: {
-    backgroundColor: '#fafafa',
+    // Background color is set dynamically
   },
   listItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   listItemContent: {
     flexDirection: 'row',
@@ -290,7 +287,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -304,7 +300,6 @@ const styles = StyleSheet.create({
   },
   listDescription: {
     fontSize: 14,
-    color: '#666',
   },
   loadingContainer: {
     flex: 1,
@@ -314,7 +309,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
   },
   emptyState: {
     flex: 1,
@@ -330,13 +324,11 @@ const styles = StyleSheet.create({
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#666',
     marginTop: 8,
     textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -345,7 +337,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   modalTitle: {
     fontSize: 18,

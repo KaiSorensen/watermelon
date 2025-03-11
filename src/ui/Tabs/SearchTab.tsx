@@ -22,6 +22,7 @@ import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import { User } from '../../classes/User';
 import { useAuth } from '../../contexts/UserContext';
+import { useColors } from '../../contexts/ColorContext';
 import debounce from 'lodash.debounce';
 import ListScreen from '../screens/ListScreen';
 import ItemScreen from '../screens/ItemScreen';
@@ -43,6 +44,7 @@ type SearchResult = {
 
 const SearchScreen = () => {
   const { currentUser } = useAuth();
+  const { colors } = useColors();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('library');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -154,7 +156,7 @@ const SearchScreen = () => {
   // Render different result types
   const renderListResult = (list: List) => (
     <TouchableOpacity 
-      style={styles.resultItem}
+      style={[styles.resultItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
       onPress={() => setSelectedList(list)}
     >
       {list.coverImageURL && (
@@ -164,14 +166,14 @@ const SearchScreen = () => {
         />
       )}
       <View style={styles.resultContent}>
-        <Text style={styles.resultTitle}>{list.title}</Text>
+        <Text style={[styles.resultTitle, { color: colors.textPrimary }]}>{list.title}</Text>
         {list.description && (
-          <Text style={styles.resultDescription} numberOfLines={2}>
+          <Text style={[styles.resultDescription, { color: colors.textSecondary }]} numberOfLines={2}>
             {list.description}
           </Text>
         )}
         <View style={styles.resultMeta}>
-          <Text style={styles.metaText}>
+          <Text style={[styles.metaText, { color: colors.textTertiary }]}>
             {list.ownerID === currentUser?.id ? 'Your list' : 'Public list'}
           </Text>
         </View>
@@ -184,7 +186,7 @@ const SearchScreen = () => {
           setSelectedList(list);
         }}
       >
-        <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
+        <Icon name="arrow-forward-outline" size={24} color={colors.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -193,19 +195,19 @@ const SearchScreen = () => {
     console.log('Rendering item:', item.id, item.title, item.content?.substring(0, 50));
     return (
       <TouchableOpacity 
-        style={styles.resultItem}
+        style={[styles.resultItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
         onPress={() => {
           console.log('Item pressed:', item.id);
           setSelectedItem(item);
         }}
       >
         <View style={styles.resultContent}>
-          <Text style={styles.resultTitle}>{item.title || 'Untitled'}</Text>
-          <Text style={styles.resultDescription} numberOfLines={2}>
+          <Text style={[styles.resultTitle, { color: colors.textPrimary }]}>{item.title || 'Untitled'}</Text>
+          <Text style={[styles.resultDescription, { color: colors.textSecondary }]} numberOfLines={2}>
             {stripHtml(item.content || '')}
           </Text>
           <View style={styles.resultMeta}>
-            <Text style={styles.metaText}>Item</Text>
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>Item</Text>
           </View>
         </View>
         <TouchableOpacity 
@@ -216,30 +218,30 @@ const SearchScreen = () => {
             setSelectedItem(item);
           }}
         >
-          <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
+          <Icon name="arrow-forward-outline" size={24} color={colors.primary} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
   };
 
   const renderUserResult = (user: User) => (
-    <View style={styles.resultItem}>
-      <View style={[styles.avatarContainer, { backgroundColor: user.avatarURL ? 'transparent' : '#e0e0e0' }]}>
+    <View style={[styles.resultItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+      <View style={[styles.avatarContainer, { backgroundColor: user.avatarURL ? 'transparent' : colors.backgroundSecondary }]}>
         {user.avatarURL ? (
           <Image source={{ uri: user.avatarURL }} style={styles.avatar} />
         ) : (
-          <Text style={styles.avatarText}>{user.username.charAt(0).toUpperCase()}</Text>
+          <Text style={[styles.avatarText, { color: colors.textPrimary }]}>{user.username.charAt(0).toUpperCase()}</Text>
         )}
       </View>
       <View style={styles.resultContent}>
-        <Text style={styles.resultTitle}>{user.username}</Text>
-        <Text style={styles.resultDescription}>User with public lists</Text>
+        <Text style={[styles.resultTitle, { color: colors.textPrimary }]}>{user.username}</Text>
+        <Text style={[styles.resultDescription, { color: colors.textSecondary }]}>User with public lists</Text>
       </View>
       <TouchableOpacity 
         style={styles.actionButton}
         onPress={() => setSelectedUser(user)}
       >
-        <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
+        <Icon name="arrow-forward-outline" size={24} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -295,14 +297,19 @@ const SearchScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <Icon name="search-outline" size={24} color="#888" style={styles.searchIcon} />
+      <View style={[styles.searchBar, { 
+        backgroundColor: colors.inputBackground, 
+        shadowColor: colors.shadow,
+        borderColor: colors.inputBorder,
+        borderWidth: 1
+      }]}>
+        <Icon name="search-outline" size={24} color={colors.iconSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.inputText }]}
           placeholder="Search..."
-          placeholderTextColor="#888"
+          placeholderTextColor={colors.inputPlaceholder}
           value={searchTerm}
           onChangeText={setSearchTerm}
           returnKeyType="search"
@@ -313,7 +320,7 @@ const SearchScreen = () => {
             onPress={() => setSearchTerm('')}
             style={styles.clearButton}
           >
-            <Icon name="close-circle-outline" size={20} color="#888" />
+            <Icon name="close-circle-outline" size={20} color={colors.iconSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -327,14 +334,14 @@ const SearchScreen = () => {
         <TouchableOpacity
           style={[
             styles.chip,
-            activeFilter === 'library' && styles.selectedChip
+            { backgroundColor: activeFilter === 'library' ? colors.primary : colors.backgroundSecondary }
           ]}
           onPress={() => handleFilterChange('library')}
         >
           <Text 
             style={[
               styles.chipText,
-              activeFilter === 'library' && styles.selectedChipText
+              { color: activeFilter === 'library' ? 'white' : colors.textSecondary }
             ]}
           >
             Library
@@ -344,14 +351,14 @@ const SearchScreen = () => {
         <TouchableOpacity
           style={[
             styles.chip,
-            activeFilter === 'lists' && styles.selectedChip
+            { backgroundColor: activeFilter === 'lists' ? colors.primary : colors.backgroundSecondary }
           ]}
           onPress={() => handleFilterChange('lists')}
         >
           <Text 
             style={[
               styles.chipText,
-              activeFilter === 'lists' && styles.selectedChipText
+              { color: activeFilter === 'lists' ? 'white' : colors.textSecondary }
             ]}
           >
             Lists
@@ -361,14 +368,14 @@ const SearchScreen = () => {
         <TouchableOpacity
           style={[
             styles.chip,
-            activeFilter === 'items' && styles.selectedChip
+            { backgroundColor: activeFilter === 'items' ? colors.primary : colors.backgroundSecondary }
           ]}
           onPress={() => handleFilterChange('items')}
         >
           <Text 
             style={[
               styles.chipText,
-              activeFilter === 'items' && styles.selectedChipText
+              { color: activeFilter === 'items' ? 'white' : colors.textSecondary }
             ]}
           >
             Items
@@ -378,14 +385,14 @@ const SearchScreen = () => {
         <TouchableOpacity
           style={[
             styles.chip,
-            activeFilter === 'users' && styles.selectedChip
+            { backgroundColor: activeFilter === 'users' ? colors.primary : colors.backgroundSecondary }
           ]}
           onPress={() => handleFilterChange('users')}
         >
           <Text 
             style={[
               styles.chipText,
-              activeFilter === 'users' && styles.selectedChipText
+              { color: activeFilter === 'users' ? 'white' : colors.textSecondary }
             ]}
           >
             Users
@@ -402,25 +409,25 @@ const SearchScreen = () => {
           contentContainerStyle={styles.resultsList}
           ListFooterComponent={
             loading ? (
-              <ActivityIndicator style={styles.loader} color="#4285F4" />
+              <ActivityIndicator style={styles.loader} color={colors.primary} />
             ) : null
           }
         />
       ) : (
         <View style={styles.content}>
           {loading ? (
-            <ActivityIndicator size="large" color="#4285F4" />
+            <ActivityIndicator size="large" color={colors.primary} />
           ) : searchTerm ? (
             <>
-              <Icon name="search-off-outline" size={64} color="#ddd" />
-              <Text style={styles.message}>
+              <Icon name="search-off-outline" size={64} color={colors.divider} />
+              <Text style={[styles.message, { color: colors.textTertiary }]}>
                 No results found for "{searchTerm}"
               </Text>
             </>
           ) : (
             <>
-              <Icon name="search-outline" size={64} color="#ddd" />
-              <Text style={styles.message}>
+              <Icon name="search-outline" size={64} color={colors.divider} />
+              <Text style={[styles.message, { color: colors.textTertiary }]}>
                 Search your library, public lists, and users
               </Text>
             </>
@@ -434,18 +441,15 @@ const SearchScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
     borderRadius: 8,
     margin: 16,
     marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -467,7 +471,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   chip: {
-    backgroundColor: '#e0e0e0',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -476,16 +479,8 @@ const styles = StyleSheet.create({
     maxHeight: 40,
     alignItems: 'center',
   },
-  selectedChip: {
-    backgroundColor: '#3498db',
-  },
   chipText: {
-    color: '#555',
     fontWeight: '500',
-  },
-  selectedChipText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -496,7 +491,6 @@ const styles = StyleSheet.create({
   message: {
     marginTop: 16,
     fontSize: 16,
-    color: '#888',
     textAlign: 'center',
   },
   resultsList: {
@@ -504,11 +498,9 @@ const styles = StyleSheet.create({
   },
   resultItem: {
     flexDirection: 'row',
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -530,7 +522,6 @@ const styles = StyleSheet.create({
   },
   resultDescription: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   resultMeta: {
@@ -539,7 +530,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: '#666',
     marginLeft: 4,
   },
   actionButton: {
@@ -563,7 +553,6 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#555',
   },
   loader: {
     marginVertical: 20,

@@ -4,10 +4,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LibraryScreen from './LibraryTab';
 import TodayScreen from './TodayTab';
 import SearchScreen from './SearchTab';
+import { useColors } from '../../contexts/ColorContext';
 
 const Tab = createBottomTabNavigator();
 
 const MainNavigator = () => {
+  const { colors } = useColors();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -27,8 +30,12 @@ const MainNavigator = () => {
 
           return <Icon name={iconName || 'ellipse'} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#4285F4',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarStyle: {
+          backgroundColor: colors.tabBarBackground,
+          borderTopColor: colors.tabBarBorder,
+        },
         headerShown: false,
       })}
     >

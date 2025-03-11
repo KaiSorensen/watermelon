@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './contexts/UserContext';
+import { ColorsProvider } from './contexts/ColorContext';
 import MainNavigator from './ui/tabs/MainNavigator';
 import LoginScreen from './ui/login/LoginScreen';
 import RegisterScreen from './ui/login/RegisterScreen';
@@ -37,9 +38,11 @@ const AppContent = () => {
 const App = () => {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ColorsProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ColorsProvider>
     </SafeAreaProvider>
   );
 };

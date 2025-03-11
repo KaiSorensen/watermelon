@@ -21,6 +21,7 @@ import { getItemsInList, retrieveUser } from '../../supabase/databaseService';
 import ListImage from '../components/ListImage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/UserContext';
+import { useColors } from '../../contexts/ColorContext';
 import ItemScreen from './ItemScreen';
 import UserScreen from './UserScreen';
 
@@ -38,23 +39,24 @@ interface SortOrderDropdownProps {
   onChange: (value: SortOrderType) => void;
   isOpen: boolean;
   toggleOpen: () => void;
+  colors: any;
 }
 
 // Dropdown component for sort order
-const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, isOpen, toggleOpen }) => {
+const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, isOpen, toggleOpen, colors }) => {
   const options: SortOrderType[] = ["date-first", "date-last", "alphabetical", "manual"];
   
   return (
-    <View style={styles.dropdownContainer}>
+    <View style={[styles.dropdownContainer, { borderColor: colors.divider }]}>
       <TouchableOpacity 
-        style={styles.dropdownHeader} 
+        style={[styles.dropdownHeader, { backgroundColor: colors.backgroundSecondary }]} 
         onPress={toggleOpen}
       >
-        <Text style={styles.dropdownHeaderText}>Sort: {value}</Text>
+        <Text style={[styles.dropdownHeaderText, { color: colors.textPrimary }]}>Sort: {value}</Text>
         <Icon 
           name={isOpen ? "chevron-up" : "chevron-down"} 
           size={24} 
-          color="#555"
+          color={colors.iconSecondary}
         />
       </TouchableOpacity>
       
@@ -65,7 +67,8 @@ const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, 
               key={option}
               style={[
                 styles.dropdownOption,
-                value === option && styles.dropdownOptionSelected
+                { borderBottomColor: colors.divider },
+                value === option && [styles.dropdownOptionSelected, { backgroundColor: colors.backgroundTertiary }]
               ]}
               onPress={() => {
                 onChange(option);
@@ -75,7 +78,8 @@ const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, 
               <Text 
                 style={[
                   styles.dropdownOptionText,
-                  value === option && styles.dropdownOptionTextSelected
+                  { color: colors.textSecondary },
+                  value === option && [styles.dropdownOptionTextSelected, { color: colors.primary }]
                 ]}
               >
                 {option}
@@ -95,6 +99,7 @@ interface ListScreenProps {
 
 const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const { currentUser } = useAuth();
+  const { colors } = useColors();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -193,18 +198,21 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   // Render an item row
   const renderItem = ({ item }: { item: Item }) => (
     <TouchableOpacity 
-      style={styles.resultItem}
+      style={[styles.resultItem, { 
+        backgroundColor: colors.card,
+        shadowColor: colors.shadow
+      }]}
       onPress={() => setSelectedItem(item)}
     >
       <View style={styles.resultContent}>
-        <Text style={styles.resultTitle} numberOfLines={1}>
+        <Text style={[styles.resultTitle, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.title || 'Untitled'}
         </Text>
-        <Text style={styles.resultDescription} numberOfLines={2}>
+        <Text style={[styles.resultDescription, { color: colors.textSecondary }]} numberOfLines={2}>
           {stripHtml(item.content)}
         </Text>
       </View>
-      <Icon name="chevron-forward" size={24} color="#aaa" />
+      <Icon name="chevron-forward" size={24} color={colors.iconSecondary} />
     </TouchableOpacity>
   );
 
@@ -232,57 +240,57 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Header with back button and list title */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.divider }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Icon name="arrow-back" size={24} color={colors.iconPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
           {list.title}
         </Text>
         <View style={styles.headerRight} />
       </View>
       
       {/* List details section */}
-      <View style={styles.detailsSection}>
+      <View style={[styles.detailsSection, { borderBottomColor: colors.divider }]}>
         <View style={styles.coverImageContainer}>
           {list.coverImageURL ? (
             <Image source={{ uri: list.coverImageURL }} style={styles.coverImage} />
           ) : (
-            <View style={[styles.coverImagePlaceholder, { backgroundColor: '#e0e0e0' }]} />
+            <View style={[styles.coverImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]} />
           )}
         </View>
         
         <View style={styles.listInfo}>
-          <Text style={styles.listTitle}>{list.title}</Text>
+          <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
           
           {/* Owner info with profile link */}
           {listOwner && (
             <TouchableOpacity 
-              style={styles.ownerContainer} 
+              style={[styles.ownerContainer, { backgroundColor: colors.backgroundSecondary }]} 
               onPress={handleViewOwnerProfile}
             >
-              <View style={styles.ownerAvatarContainer}>
+              <View style={[styles.ownerAvatarContainer, { backgroundColor: colors.backgroundTertiary }]}>
                 {listOwner.avatarURL ? (
                   <Image source={{ uri: listOwner.avatarURL }} style={styles.ownerAvatar} />
                 ) : (
-                  <Text style={styles.ownerAvatarText}>
+                  <Text style={[styles.ownerAvatarText, { color: colors.textTertiary }]}>
                     {listOwner.username.charAt(0).toUpperCase()}
                   </Text>
                 )}
               </View>
-              <Text style={styles.ownerName}>
+              <Text style={[styles.ownerName, { color: colors.textSecondary }]}>
                 {listOwner.username}
               </Text>
-              <Icon name="chevron-forward" size={16} color="#888" />
+              <Icon name="chevron-forward" size={16} color={colors.iconSecondary} />
             </TouchableOpacity>
           )}
           
           {list.description && (
-            <Text style={styles.listDescription}>
+            <Text style={[styles.listDescription, { color: colors.textSecondary }]}>
               {stripHtml(list.description)}
             </Text>
           )}
@@ -291,33 +299,33 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         {/* List controls section - only show if current user is the owner */}
         {currentUser && currentUser.id === list.ownerID && (
           <View style={styles.controlsSection}>
-            <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>Today</Text>
+            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
+              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Today</Text>
               <Switch
                 value={isToday}
                 onValueChange={handleTodayToggle}
-                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
-                thumbColor={isToday ? '#4285F4' : '#f4f3f4'}
+                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
+                thumbColor={isToday ? colors.primary : colors.backgroundTertiary}
               />
             </View>
             
-            <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>Public</Text>
+            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
+              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Public</Text>
               <Switch
                 value={isPublic}
                 onValueChange={handlePublicToggle}
-                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
-                thumbColor={isPublic ? '#4285F4' : '#f4f3f4'}
+                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
+                thumbColor={isPublic ? colors.primary : colors.backgroundTertiary}
               />
             </View>
             
-            <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>Notify on new</Text>
+            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
+              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Notify on new</Text>
               <Switch
                 value={notifyOnNew}
                 onValueChange={handleNotifyToggle}
-                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
-                thumbColor={notifyOnNew ? '#4285F4' : '#f4f3f4'}
+                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
+                thumbColor={notifyOnNew ? colors.primary : colors.backgroundTertiary}
               />
             </View>
           </View>
@@ -330,11 +338,12 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         onChange={handleSortOrderChange}
         isOpen={isSortOrderOpen}
         toggleOpen={() => setIsSortOrderOpen(!isSortOrderOpen)}
+        colors={colors}
       />
       
       {/* Items list */}
       {loading ? (
-        <ActivityIndicator size="large" color="#4285F4" style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
       ) : (
         <FlatList
           data={items}
@@ -342,7 +351,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
-            <Text style={styles.emptyMessage}>No items in this list yet</Text>
+            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>No items in this list yet</Text>
           }
         />
       )}
@@ -353,7 +362,6 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -361,7 +369,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   backButton: {
     padding: 8,
@@ -369,7 +376,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     flex: 1,
     marginLeft: 8,
   },
@@ -379,7 +385,6 @@ const styles = StyleSheet.create({
   detailsSection: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   coverImageContainer: {
     width: '100%',
@@ -395,7 +400,6 @@ const styles = StyleSheet.create({
   coverImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
   },
   listInfo: {
     marginBottom: 16,
@@ -403,12 +407,10 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
   },
   listDescription: {
     fontSize: 16,
-    color: '#666',
     lineHeight: 22,
   },
   ownerContainer: {
@@ -417,13 +419,11 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     padding: 6,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
   },
   ownerAvatarContainer: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -436,11 +436,9 @@ const styles = StyleSheet.create({
   ownerAvatarText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#888',
   },
   ownerName: {
     fontSize: 14,
-    color: '#555',
     flex: 1,
   },
   controlsSection: {
@@ -452,16 +450,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   controlLabel: {
     fontSize: 16,
-    color: '#333',
   },
   dropdownContainer: {
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -470,11 +465,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f9f9f9',
   },
   dropdownHeaderText: {
     fontSize: 16,
-    color: '#333',
   },
   dropdownOptions: {
     borderTopWidth: 1,
@@ -483,17 +476,14 @@ const styles = StyleSheet.create({
   dropdownOption: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   dropdownOptionSelected: {
-    backgroundColor: '#f0f7ff',
+    // Background color is set dynamically
   },
   dropdownOptionText: {
     fontSize: 16,
-    color: '#555',
   },
   dropdownOptionTextSelected: {
-    color: '#4285F4',
     fontWeight: '600',
   },
   listContainer: {
@@ -505,17 +495,15 @@ const styles = StyleSheet.create({
   emptyMessage: {
     textAlign: 'center',
     marginTop: 24,
-    color: '#888',
     fontSize: 16,
   },
   resultItem: {
-    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -523,17 +511,15 @@ const styles = StyleSheet.create({
   },
   resultContent: {
     flex: 1,
-    marginLeft: 12,
+    marginRight: 12,
   },
   resultTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   resultDescription: {
     fontSize: 14,
-    color: '#666',
   },
   actionButton: {
     padding: 8,

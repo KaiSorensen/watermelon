@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
+import { useColors } from '../../contexts/ColorContext';
 import { logout, deleteUserAccount } from '../../supabase/authService';
 import { retrieveUser } from '../../supabase/databaseService';
 
 const HomeScreen = () => {
   const { currentUser } = useAuth();
+  const { colors } = useColors();
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
 
   useEffect(() => {
@@ -71,29 +73,39 @@ const HomeScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.welcome}>Welcome, {currentUser?.username || 'User'}!</Text>
-      <Text style={styles.email}>{currentUser?.email}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.welcome, { color: colors.textPrimary }]}>
+        Welcome, {currentUser?.username || 'User'}!
+      </Text>
+      <Text style={[styles.email, { color: colors.textSecondary }]}>
+        {currentUser?.email}
+      </Text>
       
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusLabel}>Database Status:</Text>
+      <View style={[styles.statusContainer, { backgroundColor: colors.backgroundSecondary }]}>
+        <Text style={[styles.statusLabel, { color: colors.textPrimary }]}>Database Status:</Text>
         {dbStatus === 'checking' ? (
           <View style={styles.statusRow}>
-            <ActivityIndicator size="small" color="#666" />
-            <Text style={styles.statusText}>Checking connection...</Text>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.statusText, { color: colors.textSecondary }]}>Checking connection...</Text>
           </View>
         ) : dbStatus === 'connected' ? (
-          <Text style={[styles.statusText, { color: '#4CAF50' }]}>Connected</Text>
+          <Text style={[styles.statusText, { color: colors.success }]}>Connected</Text>
         ) : (
-          <Text style={[styles.statusText, { color: '#F44336' }]}>Error connecting</Text>
+          <Text style={[styles.statusText, { color: colors.error }]}>Error connecting</Text>
         )}
       </View>
       
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity 
+        style={[styles.logoutButton, { backgroundColor: colors.warning }]} 
+        onPress={handleLogout}
+      >
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+      <TouchableOpacity 
+        style={[styles.deleteButton, { backgroundColor: colors.error }]} 
+        onPress={handleDeleteAccount}
+      >
         <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
     </View>
@@ -114,12 +126,10 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 20,
   },
   statusContainer: {
     width: '100%',
-    backgroundColor: '#f5f5f5',
     padding: 15,
     borderRadius: 8,
     marginBottom: 30,
@@ -138,7 +148,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   logoutButton: {
-    backgroundColor: '#FF6B6B',
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
@@ -150,7 +159,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deleteButton: {
-    backgroundColor: '#D32F2F',
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,

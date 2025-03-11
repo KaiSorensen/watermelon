@@ -16,6 +16,7 @@ import { List } from '../../classes/List';
 import { supabase } from '../../supabase/supabase';
 import ListScreen from './ListScreen';
 import ListPreview from '../components/ListPreview';
+import { useColors } from '../../contexts/ColorContext';
 
 interface UserScreenProps {
   user: User;
@@ -23,6 +24,7 @@ interface UserScreenProps {
 }
 
 const UserScreen: React.FC<UserScreenProps> = ({ user, onBack }) => {
+  const { colors } = useColors();
   const [publicLists, setPublicLists] = useState<List[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedList, setSelectedList] = useState<List | null>(null);
@@ -83,40 +85,42 @@ const UserScreen: React.FC<UserScreenProps> = ({ user, onBack }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header with back button */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.divider }]}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="#333" />
+            <Icon name="arrow-back" size={24} color={colors.iconPrimary} />
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Profile</Text>
         <View style={styles.headerRight} />
       </View>
 
       {/* User Profile Section */}
-      <View style={styles.profileSection}>
+      <View style={[styles.profileSection, { borderBottomColor: colors.divider }]}>
         <View style={styles.avatarContainer}>
           {user.avatarURL ? (
             <Image source={{ uri: user.avatarURL }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>{user.username.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+              <Text style={[styles.avatarText, { color: colors.textSecondary }]}>
+                {user.username.charAt(0).toUpperCase()}
+              </Text>
             </View>
           )}
         </View>
-        <Text style={styles.username}>{user.username}</Text>
+        <Text style={[styles.username, { color: colors.textPrimary }]}>{user.username}</Text>
       </View>
 
       {/* Public Lists Section */}
       <View style={styles.listsSection}>
-        <Text style={styles.sectionTitle}>Public Lists</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Public Lists</Text>
         
         {loading ? (
-          <ActivityIndicator size="large" color="#4285F4" style={styles.loader} />
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
         ) : publicLists.length === 0 ? (
-          <Text style={styles.emptyMessage}>No public lists found</Text>
+          <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>No public lists found</Text>
         ) : (
           <FlatList
             data={publicLists}
@@ -137,7 +141,6 @@ const UserScreen: React.FC<UserScreenProps> = ({ user, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -146,7 +149,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   backButton: {
     padding: 8,
@@ -154,7 +156,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
   },
   headerRight: {
     width: 40,
@@ -163,7 +164,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   avatarContainer: {
     marginBottom: 12,
@@ -177,19 +177,16 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#e0e0e0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: '#888',
   },
   username: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   listsSection: {
     flex: 1,
@@ -199,7 +196,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
-    color: '#333',
   },
   listContainer: {
     paddingBottom: 16,
@@ -210,7 +206,6 @@ const styles = StyleSheet.create({
   emptyMessage: {
     textAlign: 'center',
     marginTop: 24,
-    color: '#888',
     fontSize: 16,
   },
 });

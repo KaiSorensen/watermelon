@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { resetPassword } from '../../supabase/authService';
+import { useColors } from '../../contexts/ColorContext';
 
-interface ForgotPasswordScreenProps {
-  navigation: any;
-}
-
-const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
+const ForgotPasswordScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [sent, setSent] = useState(false);
+  
+  const { colors } = useColors();
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -20,7 +31,7 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
     setLoading(true);
     try {
       await resetPassword(email);
-      setResetSent(true);
+      setSent(true);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -29,105 +40,161 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
-      
-      {resetSent ? (
-        <View>
-          <Text style={styles.successMessage}>
-            Password reset email sent! Check your inbox for further instructions.
-          </Text>
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={() => navigation.navigate('Login')}
-          >
-            <Text style={styles.buttonText}>Back to Login</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <Text style={styles.instructions}>
-            Enter your email address and we'll send you instructions to reset your password.
-          </Text>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          
-          <TouchableOpacity 
-            style={styles.button}
-            onPress={handleResetPassword}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <View style={styles.contentContainer}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              Reset Password
+            </Text>
+            
+            {sent ? (
+              <View style={styles.sentContainer}>
+                <Text style={[styles.sentText, { color: colors.textPrimary }]}>
+                  Password reset email sent!
+                </Text>
+                <Text style={[styles.sentSubtext, { color: colors.textSecondary }]}>
+                  Please check your email for instructions to reset your password.
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.backButton, { backgroundColor: colors.primary }]}
+                  onPress={() => navigation.navigate('Login')}
+                >
+                  <Text style={styles.backButtonText}>Back to Login</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <Text style={styles.buttonText}>Send Reset Email</Text>
+              <View style={styles.formContainer}>
+                <Text style={[styles.instructions, { color: colors.textSecondary }]}>
+                  Enter your email address and we'll send you instructions to reset your password.
+                </Text>
+                
+                <TextInput
+                  style={[styles.input, {
+                    backgroundColor: colors.inputBackground,
+                    color: colors.inputText,
+                    borderColor: colors.inputBorder
+                  }]}
+                  placeholder="Email"
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                
+                <TouchableOpacity 
+                  style={[styles.resetButton, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
+                  onPress={handleResetPassword}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.resetButtonText}>Reset Password</Text>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={() => navigation.navigate('Login')}
+                >
+                  <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.link}>Back to Login</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
+    marginBottom: 20,
   },
   instructions: {
+    fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#666',
+    marginBottom: 30,
+  },
+  formContainer: {
+    width: '100%',
   },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
-  button: {
-    backgroundColor: '#4285F4',
+  resetButton: {
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
   },
-  buttonText: {
+  resetButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  link: {
-    color: '#4285F4',
-    textAlign: 'center',
-    marginTop: 10,
+  cancelButton: {
+    marginTop: 16,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  successMessage: {
-    textAlign: 'center',
-    marginBottom: 20,
-    color: 'green',
+  cancelButtonText: {
     fontSize: 16,
+  },
+  sentContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  sentText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  sentSubtext: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

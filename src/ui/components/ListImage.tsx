@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Image, StyleSheet } from 'react-native';
+import { useColors } from '../../contexts/ColorContext';
 
 interface ListImageProps {
   imageUrl: string | null;
@@ -8,6 +9,8 @@ interface ListImageProps {
 }
 
 const ListImage: React.FC<ListImageProps> = ({ imageUrl, size = 'medium', style }) => {
+  const { colors } = useColors();
+  
   // Determine dimensions based on size prop
   const getDimensions = () => {
     switch (size) {
@@ -36,9 +39,8 @@ const ListImage: React.FC<ListImageProps> = ({ imageUrl, size = 'medium', style 
       const h = Math.abs(hash) % 360;
       return `hsl(${h}, 70%, 80%)`;
     } else {
-      // Random pastel color if no imageUrl
-      const hue = Math.floor(Math.random() * 360);
-      return `hsl(${hue}, 70%, 80%)`;
+      // Use accent color with opacity if no imageUrl
+      return colors.accent + '40'; // 40 is hex for 25% opacity
     }
   };
 

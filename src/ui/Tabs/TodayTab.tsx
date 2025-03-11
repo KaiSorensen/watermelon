@@ -13,10 +13,12 @@ import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import PreviewItem from '../components/PreviewItem';
 import { useAuth } from '../../contexts/UserContext';
+import { useColors } from '../../contexts/ColorContext';
 import ListScreen from '../screens/ListScreen';
 
 const TodayScreen = () => {
   const { currentUser, loading } = useAuth();
+  const { colors } = useColors();
   const [todayLists, setTodayLists] = useState<List[]>([]);
   const [selectedListIndex, setSelectedListIndex] = useState<number>(0);
   const [currentItem, setCurrentItem] = useState<Item | undefined>(undefined);
@@ -114,14 +116,14 @@ const TodayScreen = () => {
   // Show loading state while fetching user or lists
   if (loading || loadingLists) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.subtitle}>Your daily items</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Today</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your daily items</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading your lists...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your lists...</Text>
         </View>
       </SafeAreaView>
     );
@@ -130,14 +132,14 @@ const TodayScreen = () => {
   // Show login prompt if no user
   if (!currentUser) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Today</Text>
-          <Text style={styles.subtitle}>Your daily items</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Today</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your daily items</Text>
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Not Logged In</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.textTertiary }]}>Not Logged In</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
             Please log in to see your today lists
           </Text>
         </View>
@@ -146,10 +148,10 @@ const TodayScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.subtitle}>Your daily items</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Today</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your daily items</Text>
       </View>
 
       {todayLists.length > 0 ? (
@@ -166,6 +168,7 @@ const TodayScreen = () => {
                 key={list.id}
                 style={[
                   styles.chip,
+                  { backgroundColor: selectedListIndex === index ? colors.primary : colors.backgroundSecondary },
                   selectedListIndex === index && styles.selectedChip
                 ]}
                 onPress={() => handleChipPress(index)}
@@ -173,6 +176,7 @@ const TodayScreen = () => {
                 <Text 
                   style={[
                     styles.chipText,
+                    { color: selectedListIndex === index ? 'white' : colors.textSecondary },
                     selectedListIndex === index && styles.selectedChipText
                   ]}
                 >
@@ -193,8 +197,8 @@ const TodayScreen = () => {
         </>
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No Today Lists</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.textTertiary }]}>No Today Lists</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
             Mark lists as "Today" in your list settings to see them here
           </Text>
         </View>
@@ -206,7 +210,6 @@ const TodayScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     padding: 20,
@@ -219,7 +222,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 10,
   },
   chipsContainer: {
@@ -227,7 +229,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   chip: {
-    backgroundColor: '#e0e0e0',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -237,14 +238,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedChip: {
-    backgroundColor: '#3498db',
+    // Color is set dynamically
   },
   chipText: {
-    color: '#555',
     fontWeight: '500',
   },
   selectedChipText: {
-    color: 'white',
     fontWeight: 'bold',
   },
   previewContainer: {
@@ -260,12 +259,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#888',
     marginBottom: 10,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#aaa',
     textAlign: 'center',
   },
   loadingContainer: {
@@ -276,7 +273,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
   },
 });
 
