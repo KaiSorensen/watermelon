@@ -314,6 +314,7 @@ const SearchScreen = () => {
           onChangeText={setSearchTerm}
           returnKeyType="search"
           autoCapitalize="none"
+          autoCorrect={false}
         />
         {searchTerm.length > 0 && (
           <TouchableOpacity 

@@ -27,7 +27,7 @@ const stripHtml = (html: string): string => {
 };
 
 const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
-  const { colors } = useColors();
+  const { colors, isDarkMode } = useColors();
   const [title, setTitle] = useState<string>(item.title || '');
   const [content, setContent] = useState<string>(stripHtml(item.content || ''));
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -107,7 +107,7 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.divider }]}>

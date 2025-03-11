@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { registerWithEmail } from '../../supabase/authService';
+import { useColors } from '../../contexts/ColorContext';
 
-interface RegisterScreenProps {
-  navigation: any;
-}
-
-const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
-  const [username, setUsername] = useState('');
+const RegisterScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const { colors } = useColors();
 
   const handleRegister = async () => {
-    // Basic validation
-    if (!username || !email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -25,15 +35,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       return;
     }
 
-    if (password.length < 7) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
     setLoading(true);
     try {
       await registerWithEmail(email, password, username);
-      // Navigation will be handled by the auth state listener
+      Alert.alert(
+        'Registration Successful', 
+        'Please check your email to verify your account',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+      );
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message);
     } finally {
@@ -42,98 +51,153 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-      />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
-      
-      <TouchableOpacity 
-        style={styles.button}
-        onPress={handleRegister}
-        disabled={loading}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign Up</Text>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Already have an account? Login</Text>
-      </TouchableOpacity>
-    </View>
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <View style={styles.contentContainer}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Create Account</Text>
+            
+            <View style={styles.formContainer}>
+              
+            <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Username"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+              />
+
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Email"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Password"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Confirm Password"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+              
+              <TouchableOpacity 
+                style={[styles.registerButton, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
+                onPress={handleRegister}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.registerButtonText}>Register</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.footer}>
+              <Text style={[styles.haveAccountText, { color: colors.textSecondary }]}>
+                Already have an account?
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={[styles.loginText, { color: colors.primary }]}>
+                  Login
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
+    marginBottom: 30,
+  },
+  formContainer: {
+    marginBottom: 30,
   },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
-  button: {
-    backgroundColor: '#4285F4',
+  registerButton: {
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginTop: 8,
   },
-  buttonText: {
+  registerButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  link: {
-    color: '#4285F4',
-    textAlign: 'center',
-    marginTop: 10,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  haveAccountText: {
+    fontSize: 14,
+    marginRight: 5,
+  },
+  loginText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

@@ -19,8 +19,8 @@ BEGIN
     INSERT INTO Users (id, username, email, avatarURL, notifsEnabled)
     VALUES (
       user_id,
-      'New User',
-      'user@example.com',
+      'Of The Day',
+      'oftheday@otd.com',
       NULL,
       FALSE
     );

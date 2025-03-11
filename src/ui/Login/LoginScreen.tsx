@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { loginWithEmail, loginWithGoogle, getUserData } from '../../supabase/authService';
+import { useColors } from '../../contexts/ColorContext';
 
 const LoginScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
@@ -23,7 +23,7 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
   const [error, setError] = useState('');
   // const { setCurrentUser } = useAuth();
   
-  const isDarkMode = useColorScheme() === 'dark';
+  const { colors, isDarkMode } = useColors();
   
   const handleEmailLogin = async () => {
     if (!email || !password) {
@@ -61,107 +61,99 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, {
-      backgroundColor: isDarkMode ? '#121212' : '#F5F5F5'
-    }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
+        style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollView}>
-          <View style={styles.logoContainer}>
-            {/* <Image 
-              source={require('../assets/logo.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-            /> */}
-            <Text style={[styles.appName, {
-              color: isDarkMode ? '#FFFFFF' : '#333333'
-            }]}>
-              Of The Day
-            </Text>
-            <Text style={[styles.tagline, {
-              color: isDarkMode ? '#CCCCCC' : '#666666'
-            }]}>
-              Don't kill yourself you're too pretty.
-            </Text>
-          </View>
-          
-          <View style={styles.formContainer}>
-            {error ? (
-              <Text style={styles.errorText}>{error}</Text>
-            ) : null}
-            
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: isDarkMode ? '#333333' : '#FFFFFF',
-                color: isDarkMode ? '#FFFFFF' : '#333333',
-                borderColor: isDarkMode ? '#444444' : '#DDDDDD'
-              }]}
-              placeholder="Email"
-              placeholderTextColor={isDarkMode ? '#AAAAAA' : '#999999'}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: isDarkMode ? '#333333' : '#FFFFFF',
-                color: isDarkMode ? '#FFFFFF' : '#333333',
-                borderColor: isDarkMode ? '#444444' : '#DDDDDD'
-              }]}
-              placeholder="Password"
-              placeholderTextColor={isDarkMode ? '#AAAAAA' : '#999999'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            
-            <TouchableOpacity 
-              style={[styles.loginButton, { opacity: loading ? 0.7 : 1 }]}
-              onPress={handleEmailLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
-              )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.loginButton, styles.googleButton]}
-              onPress={handleGoogleLogin}
-              disabled={loading}
-            >
-              <Text style={styles.loginButtonText}>Login with Google</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.forgotPasswordButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={[styles.forgotPasswordText, {
-                color: isDarkMode ? '#AAAAAA' : '#666666'
-              }]}>
-                Forgot Password?
+        <ScrollView
+          contentContainerStyle={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.contentContainer}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../assets/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={[styles.appName, { color: colors.textPrimary }]}>
+                Of The Day
               </Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.footer}>
-            <Text style={[styles.noAccountText, {
-              color: isDarkMode ? '#CCCCCC' : '#666666'
-            }]}>
-              Don't have an account?
-            </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('Register')}
-            >
-              <Text style={styles.signUpText}>Sign Up</Text>
-            </TouchableOpacity>
+            </View>
+            
+            <View style={styles.formContainer}>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Email"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              
+              <TextInput
+                style={[styles.input, {
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText,
+                  borderColor: colors.inputBorder
+                }]}
+                placeholder="Password"
+                placeholderTextColor={colors.inputPlaceholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+              
+              <TouchableOpacity 
+                style={[styles.loginButton, { opacity: loading ? 0.7 : 1, backgroundColor: colors.primary }]}
+                onPress={handleEmailLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Login</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.loginButton, styles.googleButton, { backgroundColor: colors.secondary }]}
+                onPress={handleGoogleLogin}
+                disabled={loading}
+              >
+                <Text style={styles.loginButtonText}>Login with Google</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.forgotPasswordButton}
+                onPress={() => navigation.navigate('ForgotPassword')}
+              >
+                <Text style={[styles.forgotPasswordText, {
+                  color: colors.textSecondary
+                }]}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.footer}>
+              <Text style={[styles.noAccountText, { color: colors.textSecondary }]}>
+                Don't have an account?
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text style={[styles.signUpText, { color: colors.primary }]}>
+                  Sign Up
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -173,11 +165,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
   scrollView: {
     flexGrow: 1,
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
@@ -186,17 +178,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
+    width: 120,
+    height: 120,
+    marginBottom: 20,
   },
   appName: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  tagline: {
-    fontSize: 16,
     textAlign: 'center',
   },
   formContainer: {
@@ -216,7 +204,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginButton: {
-    backgroundColor: '#4A6FFF',
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',
@@ -251,7 +238,6 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4A6FFF',
   },
 });
 

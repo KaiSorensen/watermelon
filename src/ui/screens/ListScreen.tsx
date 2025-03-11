@@ -99,7 +99,7 @@ interface ListScreenProps {
 
 const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const { currentUser } = useAuth();
-  const { colors } = useColors();
+  const { colors, isDarkMode } = useColors();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -241,7 +241,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Header with back button and list title */}
       <View style={[styles.header, { borderBottomColor: colors.divider }]}>
