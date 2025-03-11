@@ -25,6 +25,7 @@ import { useAuth } from '../../contexts/UserContext';
 import debounce from 'lodash.debounce';
 import ListScreen from '../screens/ListScreen';
 import ItemScreen from '../screens/ItemScreen';
+import UserScreen from '../screens/UserScreen';
 
 // Helper function to strip HTML tags for plain text display
 const stripHtml = (html: string): string => {
@@ -48,6 +49,7 @@ const SearchScreen = () => {
   const [loading, setLoading] = useState(false);
   const [selectedList, setSelectedList] = useState<List | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Create a debounced search function
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,7 +237,7 @@ const SearchScreen = () => {
       </View>
       <TouchableOpacity 
         style={styles.actionButton}
-        onPress={() => {/* Navigate to user profile */}}
+        onPress={() => setSelectedUser(user)}
       >
         <Icon name="arrow-forward-outline" size={24} color="#4285F4" />
       </TouchableOpacity>
@@ -263,6 +265,15 @@ const SearchScreen = () => {
   const handleBackFromItemScreen = () => {
     setSelectedItem(null);
   };
+
+  const handleBackFromUserScreen = () => {
+    setSelectedUser(null);
+  };
+
+  // If a user is selected, show the UserScreen
+  if (selectedUser) {
+    return <UserScreen user={selectedUser} onBack={handleBackFromUserScreen} />;
+  }
 
   // If a list is selected, show the ListScreen
   if (selectedList) {

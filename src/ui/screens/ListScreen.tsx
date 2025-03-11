@@ -11,15 +11,18 @@ import {
   StatusBar,
   ScrollView,
   Dimensions,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
-import { getItemsInList } from '../../supabase/databaseService';
+import { User } from '../../classes/User';
+import { getItemsInList, retrieveUser } from '../../supabase/databaseService';
 import ListImage from '../components/ListImage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/UserContext';
 import ItemScreen from './ItemScreen';
+import UserScreen from './UserScreen';
 
 // Helper function to strip HTML tags for plain text display
 const stripHtml = (html: string): string => {
@@ -95,14 +98,21 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [listOwner, setListOwner] = useState<User | null>(null);
+  const [showingUserScreen, setShowingUserScreen] = useState(false);
   
   // Local state for list properties that can be modified
   const [isToday, setIsToday] = useState(list.today || false);
   const [isPublic, setIsPublic] = useState(list.isPublic || false);
   const [notifyOnNew, setNotifyOnNew] = useState(list.notifyOnNew || false);
-  const [sortOrder, setSortOrder] = useState<SortOrderType>(list.sortOrder as SortOrderType || "date-first");
+  const [sortOrder, setSortOrder] = useState<SortOrderType>(list.sortOrder as SortOrderType || 'date-first');
   const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  useEffect(() => {
+    fetchItems();
+    fetchListOwner();
+  }, []);
 
   // Function to fetch items
   const fetchItems = async () => {
@@ -117,10 +127,18 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     }
   };
 
-  // Fetch items when component mounts or list changes
-  useEffect(() => {
-    fetchItems();
-  }, [list.id]);
+  const fetchListOwner = async () => {
+    try {
+      if (list.ownerID) {
+        const ownerData = await retrieveUser(list.ownerID);
+        if (ownerData) {
+          setListOwner(ownerData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching list owner:', error);
+    }
+  };
 
   // Save list changes
   const saveListChanges = async () => {
@@ -162,17 +180,27 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     setTimeout(saveListChanges, 500);
   };
 
+  const handleViewOwnerProfile = () => {
+    if (listOwner) {
+      setShowingUserScreen(true);
+    }
+  };
+
+  const handleBackFromUserScreen = () => {
+    setShowingUserScreen(false);
+  };
+
   // Render an item row
   const renderItem = ({ item }: { item: Item }) => (
     <TouchableOpacity 
-      style={styles.itemRow}
+      style={styles.resultItem}
       onPress={() => setSelectedItem(item)}
     >
-      <View style={styles.itemContent}>
-        <Text style={styles.itemTitle} numberOfLines={1}>
+      <View style={styles.resultContent}>
+        <Text style={styles.resultTitle} numberOfLines={1}>
           {item.title || 'Untitled'}
         </Text>
-        <Text style={styles.itemPreview} numberOfLines={2}>
+        <Text style={styles.resultDescription} numberOfLines={2}>
           {stripHtml(item.content)}
         </Text>
       </View>
@@ -183,6 +211,11 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   // Calculate header height based on screen dimensions
   const { width, height } = Dimensions.get('window');
   const headerHeight = Math.min(height * 0.4, 300);
+
+  // If showing user screen
+  if (showingUserScreen && listOwner) {
+    return <UserScreen user={listOwner} onBack={handleBackFromUserScreen} />;
+  }
 
   // If an item is selected, show the ItemScreen
   if (selectedItem) {
@@ -202,100 +235,117 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header with back button */}
+      {/* Header with back button and list title */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+          {list.title}
+        </Text>
+        <View style={styles.headerRight} />
       </View>
       
-      <ScrollView style={styles.scrollView} stickyHeaderIndices={[1]}>
-        {/* List header with image and details */}
-        <View style={[styles.listHeader, { height: headerHeight }]}>
-          <View style={styles.imageContainer}>
-            <ListImage 
-              imageUrl={list.coverImageURL} 
-              size="large" 
-              style={styles.listImage}
-            />
-          </View>
-          
-          <View style={styles.listInfo}>
-            <Text style={styles.listTitle}>{list.title}</Text>
-            {list.description && (
-              <Text style={styles.listDescription}>{list.description}</Text>
-            )}
-            <Text style={styles.listMeta}>
-              {currentUser?.id === list.ownerID ? 'Your list' : 'Shared list'} • {items.length} items
-            </Text>
-          </View>
-        </View>
-        
-        {/* Controls section */}
-        <View style={styles.controlsContainer}>
-          <View style={styles.controlRow}>
-            <Text style={styles.controlLabel}>Today</Text>
-            <Switch
-              value={isToday}
-              onValueChange={handleTodayToggle}
-              trackColor={{ false: '#d0d0d0', true: '#81b0ff' }}
-              thumbColor={isToday ? '#3498db' : '#f4f3f4'}
-            />
-          </View>
-          
-          <View style={styles.controlRow}>
-            <Text style={styles.controlLabel}>Public</Text>
-            <Switch
-              value={isPublic}
-              onValueChange={handlePublicToggle}
-              trackColor={{ false: '#d0d0d0', true: '#81b0ff' }}
-              thumbColor={isPublic ? '#3498db' : '#f4f3f4'}
-            />
-          </View>
-          
-          <View style={styles.controlRow}>
-            <Text style={styles.controlLabel}>Notifications</Text>
-            <Switch
-              value={notifyOnNew}
-              onValueChange={handleNotifyToggle}
-              trackColor={{ false: '#d0d0d0', true: '#81b0ff' }}
-              thumbColor={notifyOnNew ? '#3498db' : '#f4f3f4'}
-            />
-          </View>
-          
-          <SortOrderDropdown
-            value={sortOrder}
-            onChange={handleSortOrderChange}
-            isOpen={isSortDropdownOpen}
-            toggleOpen={() => setSortDropdownOpen(!isSortDropdownOpen)}
-          />
-        </View>
-        
-        {/* Items list */}
-        <View style={styles.itemsContainer}>
-          <Text style={styles.sectionTitle}>Items</Text>
-          
-          {loading ? (
-            <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
-          ) : items.length > 0 ? (
-            items.map((item) => (
-              <React.Fragment key={item.id}>
-                {renderItem({ item })}
-              </React.Fragment>
-            ))
+      {/* List details section */}
+      <View style={styles.detailsSection}>
+        <View style={styles.coverImageContainer}>
+          {list.coverImageURL ? (
+            <Image source={{ uri: list.coverImageURL }} style={styles.coverImage} />
           ) : (
-            <View style={styles.emptyState}>
-              <Icon name="list-outline" size={48} color="#ddd" />
-              <Text style={styles.emptyText}>No items in this list yet</Text>
-            </View>
+            <View style={[styles.coverImagePlaceholder, { backgroundColor: '#e0e0e0' }]} />
           )}
         </View>
-      </ScrollView>
+        
+        <View style={styles.listInfo}>
+          <Text style={styles.listTitle}>{list.title}</Text>
+          
+          {/* Owner info with profile link */}
+          {listOwner && (
+            <TouchableOpacity 
+              style={styles.ownerContainer} 
+              onPress={handleViewOwnerProfile}
+            >
+              <View style={styles.ownerAvatarContainer}>
+                {listOwner.avatarURL ? (
+                  <Image source={{ uri: listOwner.avatarURL }} style={styles.ownerAvatar} />
+                ) : (
+                  <Text style={styles.ownerAvatarText}>
+                    {listOwner.username.charAt(0).toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.ownerName}>
+                {listOwner.username}
+              </Text>
+              <Icon name="chevron-forward" size={16} color="#888" />
+            </TouchableOpacity>
+          )}
+          
+          {list.description && (
+            <Text style={styles.listDescription}>
+              {stripHtml(list.description)}
+            </Text>
+          )}
+        </View>
       
-      {/* Floating action button to add new items */}
-      <TouchableOpacity style={styles.fab}>
-        <Icon name="add" size={24} color="white" />
-      </TouchableOpacity>
+        {/* List controls section - only show if current user is the owner */}
+        {currentUser && currentUser.id === list.ownerID && (
+          <View style={styles.controlsSection}>
+            <View style={styles.controlRow}>
+              <Text style={styles.controlLabel}>Today</Text>
+              <Switch
+                value={isToday}
+                onValueChange={handleTodayToggle}
+                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
+                thumbColor={isToday ? '#4285F4' : '#f4f3f4'}
+              />
+            </View>
+            
+            <View style={styles.controlRow}>
+              <Text style={styles.controlLabel}>Public</Text>
+              <Switch
+                value={isPublic}
+                onValueChange={handlePublicToggle}
+                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
+                thumbColor={isPublic ? '#4285F4' : '#f4f3f4'}
+              />
+            </View>
+            
+            <View style={styles.controlRow}>
+              <Text style={styles.controlLabel}>Notify on new</Text>
+              <Switch
+                value={notifyOnNew}
+                onValueChange={handleNotifyToggle}
+                trackColor={{ false: '#d1d1d1', true: '#81b0ff' }}
+                thumbColor={notifyOnNew ? '#4285F4' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+        )}
+      </View>
+      
+      {/* Sort order dropdown */}
+      <SortOrderDropdown
+        value={sortOrder}
+        onChange={handleSortOrderChange}
+        isOpen={isSortOrderOpen}
+        toggleOpen={() => setIsSortOrderOpen(!isSortOrderOpen)}
+      />
+      
+      {/* Items list */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#4285F4" style={styles.loader} />
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <Text style={styles.emptyMessage}>No items in this list yet</Text>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -303,68 +353,98 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
   },
   header: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 40 : 10,
-    left: 10,
-    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 8,
   },
-  scrollView: {
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
     flex: 1,
+    marginLeft: 8,
   },
-  listHeader: {
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 40,
-    paddingBottom: 20,
+  headerRight: {
+    width: 40,
   },
-  imageContainer: {
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+  detailsSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  listImage: {
+  coverImageContainer: {
+    width: '100%',
+    height: 200,
     borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e0e0e0',
   },
   listInfo: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   listTitle: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
     marginBottom: 8,
-    textAlign: 'center',
   },
   listDescription: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 8,
-    textAlign: 'center',
+    lineHeight: 22,
   },
-  listMeta: {
-    fontSize: 14,
+  ownerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  ownerAvatarContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    overflow: 'hidden',
+  },
+  ownerAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  ownerAvatarText: {
+    fontSize: 12,
+    fontWeight: 'bold',
     color: '#888',
   },
-  controlsContainer: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  ownerName: {
+    fontSize: 14,
+    color: '#555',
+    flex: 1,
+  },
+  controlsSection: {
+    marginTop: 16,
   },
   controlRow: {
     flexDirection: 'row',
@@ -372,42 +452,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#eee',
   },
   controlLabel: {
     fontSize: 16,
     color: '#333',
   },
   dropdownContainer: {
-    marginTop: 12,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   dropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    padding: 12,
+    backgroundColor: '#f9f9f9',
   },
   dropdownHeaderText: {
     fontSize: 16,
     color: '#333',
   },
   dropdownOptions: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
   },
   dropdownOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#eee',
   },
   dropdownOptionSelected: {
     backgroundColor: '#f0f7ff',
@@ -417,72 +493,50 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   dropdownOptionTextSelected: {
-    color: '#3498db',
-    fontWeight: '500',
+    color: '#4285F4',
+    fontWeight: '600',
   },
-  itemsContainer: {
-    padding: 16,
+  listContainer: {
+    paddingBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    marginTop: 8,
+  loader: {
+    marginTop: 24,
   },
-  itemRow: {
+  emptyMessage: {
+    textAlign: 'center',
+    marginTop: 24,
+    color: '#888',
+    fontSize: 16,
+  },
+  resultItem: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 1,
+    elevation: 2,
   },
-  itemContent: {
+  resultContent: {
     flex: 1,
+    marginLeft: 12,
   },
-  itemTitle: {
+  resultTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#333',
     marginBottom: 4,
   },
-  itemPreview: {
+  resultDescription: {
     fontSize: 14,
     color: '#666',
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-  },
-  loader: {
-    marginVertical: 20,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#3498db',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+  actionButton: {
+    padding: 8,
   },
 });
 
