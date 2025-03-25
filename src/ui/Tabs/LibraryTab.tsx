@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Modal,
+  Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
 import { useColors } from '../../contexts/ColorContext';
@@ -17,6 +18,8 @@ import { List } from '../../classes/List';
 import Icon from 'react-native-vector-icons/Ionicons';
 import UserSettingsScreen from '../screens/UserSettingsScreen';
 import ListScreen from '../screens/ListScreen';
+import CreateFolderModal from '../components/CreateFolderModal';
+import CreateListModal from '../components/CreateListModal';
 
 const LibraryScreen = () => {
   const { currentUser, loading } = useAuth();
@@ -25,6 +28,8 @@ const LibraryScreen = () => {
   const [allExpanded, setAllExpanded] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedList, setSelectedList] = useState<List | null>(null);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [showCreateList, setShowCreateList] = useState(false);
 
   const toggleFolder = (folderId: string) => {
     const newExpandedFolders = new Set(expandedFolders);
@@ -136,6 +141,24 @@ const LibraryScreen = () => {
     setSelectedList(null);
   };
 
+  const handleFolderCreated = (folder: Folder) => {
+    if (currentUser) {
+      currentUser.rootFolders.push(folder);
+    }
+  };
+
+  const handleListCreated = (list: List) => {
+    if (currentUser) {
+      currentUser.listMap.set(list.id, list);
+      if (list.folderID) {
+        const folder = currentUser.rootFolders.find(f => f.id === list.folderID);
+        if (folder) {
+          folder.listsIDs.push(list.id);
+        }
+      }
+    }
+  };
+
   if (selectedList) {
     return <ListScreen list={selectedList} onBack={handleBackFromListScreen} />;
   }
@@ -192,6 +215,24 @@ const LibraryScreen = () => {
         </ScrollView>
       )}
 
+      {/* Create Folder Button */}
+      <TouchableOpacity
+        style={[styles.createButton, { backgroundColor: colors.primary }]}
+        onPress={() => setShowCreateFolder(true)}
+      >
+        <Icon name="folder-add-outline" size={24} color="white" />
+        <Text style={styles.createButtonText}>New Folder</Text>
+      </TouchableOpacity>
+
+      {/* Create List Button */}
+      <TouchableOpacity
+        style={[styles.createButton, styles.createListButton, { backgroundColor: colors.primary }]}
+        onPress={() => setShowCreateList(true)}
+      >
+        <Icon name="add-circle-outline" size={24} color="white" />
+        <Text style={styles.createButtonText}>New List</Text>
+      </TouchableOpacity>
+
       <Modal
         visible={showSettings}
         animationType="slide"
@@ -208,6 +249,20 @@ const LibraryScreen = () => {
           <UserSettingsScreen />
         </SafeAreaView>
       </Modal>
+
+      <CreateFolderModal
+        visible={showCreateFolder}
+        onClose={() => setShowCreateFolder(false)}
+        onFolderCreated={handleFolderCreated}
+        parentFolders={currentUser?.getAllFolders() || []}
+      />
+
+      <CreateListModal
+        visible={showCreateList}
+        onClose={() => setShowCreateList(false)}
+        onListCreated={handleListCreated}
+        folders={currentUser?.getAllFolders() || []}
+      />
     </SafeAreaView>
   );
 };
@@ -341,6 +396,37 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  createButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  createListButton: {
+    left: undefined,
+    right: 24,
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

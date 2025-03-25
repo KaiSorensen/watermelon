@@ -104,8 +104,12 @@ export class User {
         return this._listMap.get(listId);
     }
 
-    public getRootFolder(folderId: string) {
-        return this._rootFolders.find(f => f.id === folderId);
+    public getAllFolders() {
+        const folders = [...this._rootFolders];
+        for (const folder of this._rootFolders) {
+            folders.push(...folder.subFolders);
+        }
+        return folders;
     }
     
     public getTodayLists() {

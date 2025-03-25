@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/UserContext';
 import { useColors } from '../../contexts/ColorContext';
 import ItemScreen from './ItemScreen';
 import UserScreen from './UserScreen';
+import ListSettingsModal from '../components/ListSettingsModal';
 
 // Helper function to strip HTML tags for plain text display
 const stripHtml = (html: string): string => {
@@ -106,6 +107,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [listOwner, setListOwner] = useState<User | null>(null);
   const [showingUserScreen, setShowingUserScreen] = useState(false);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   
   // Local state for list properties that can be modified
   const [isToday, setIsToday] = useState(list.today || false);
@@ -145,54 +147,28 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     }
   };
 
-  // Save list changes
-  const saveListChanges = async () => {
+  // Handle settings save
+  const handleSettingsSave = async (updates: Partial<List>) => {
     try {
-      list.today = isToday;
-      list.isPublic = isPublic;
-      list.notifyOnNew = notifyOnNew;
-      list.sortOrder = sortOrder;
+      // Update local state immediately for UI feedback
+      if ('isPublic' in updates && updates.isPublic !== undefined) setIsPublic(updates.isPublic);
+      if ('today' in updates && updates.today !== undefined) setIsToday(updates.today);
+      if ('notifyOnNew' in updates && updates.notifyOnNew !== undefined) setNotifyOnNew(updates.notifyOnNew);
+      if ('sortOrder' in updates && updates.sortOrder !== undefined) setSortOrder(updates.sortOrder as SortOrderType);
+
+      // Update the list object
+      Object.assign(list, updates);
+      
+      // Save to database
       await list.save();
     } catch (error) {
-      console.error('Error saving list changes:', error);
-      // Revert to original values if save fails
-      setIsToday(list.today || false);
-      setIsPublic(list.isPublic || false);
-      setNotifyOnNew(list.notifyOnNew || false);
-      setSortOrder(list.sortOrder as SortOrderType || "date-first");
+      console.error('Error saving list settings:', error);
+      // Revert local state if save fails
+      if ('isPublic' in updates && updates.isPublic !== undefined) setIsPublic(list.isPublic);
+      if ('today' in updates && updates.today !== undefined) setIsToday(list.today);
+      if ('notifyOnNew' in updates && updates.notifyOnNew !== undefined) setNotifyOnNew(list.notifyOnNew);
+      if ('sortOrder' in updates && updates.sortOrder !== undefined) setSortOrder(list.sortOrder as SortOrderType);
     }
-  };
-
-  // Handle toggle changes
-  const handleTodayToggle = (value: boolean) => {
-    setIsToday(value);
-    // Save changes after a short delay to avoid too many saves
-    setTimeout(saveListChanges, 500);
-  };
-
-  const handlePublicToggle = (value: boolean) => {
-    setIsPublic(value);
-    setTimeout(saveListChanges, 500);
-  };
-
-  const handleNotifyToggle = (value: boolean) => {
-    setNotifyOnNew(value);
-    setTimeout(saveListChanges, 500);
-  };
-
-  const handleSortOrderChange = (value: SortOrderType) => {
-    setSortOrder(value);
-    setTimeout(saveListChanges, 500);
-  };
-
-  const handleViewOwnerProfile = () => {
-    if (listOwner) {
-      setShowingUserScreen(true);
-    }
-  };
-
-  const handleBackFromUserScreen = () => {
-    setShowingUserScreen(false);
   };
 
   // Render an item row
@@ -222,7 +198,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
 
   // If showing user screen
   if (showingUserScreen && listOwner) {
-    return <UserScreen user={listOwner} onBack={handleBackFromUserScreen} />;
+    return <UserScreen user={listOwner} onBack={() => setShowingUserScreen(false)} />;
   }
 
   // If an item is selected, show the ItemScreen
@@ -251,7 +227,12 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
           {list.title}
         </Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          style={styles.headerRight} 
+          onPress={() => setIsSettingsModalVisible(true)}
+        >
+          <Icon name="settings-outline" size={24} color={colors.iconPrimary} />
+        </TouchableOpacity>
       </View>
       
       {/* List details section */}
@@ -271,7 +252,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           {listOwner && (
             <TouchableOpacity 
               style={[styles.ownerContainer, { backgroundColor: colors.backgroundSecondary }]} 
-              onPress={handleViewOwnerProfile}
+              onPress={() => setShowingUserScreen(true)}
             >
               <View style={[styles.ownerAvatarContainer, { backgroundColor: colors.backgroundTertiary }]}>
                 {listOwner.avatarURL ? (
@@ -303,7 +284,10 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
               <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Today</Text>
               <Switch
                 value={isToday}
-                onValueChange={handleTodayToggle}
+                onValueChange={(value) => {
+                  setIsToday(value);
+                  handleSettingsSave({ today: value });
+                }}
                 trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
                 thumbColor={isToday ? colors.primary : colors.backgroundTertiary}
               />
@@ -313,7 +297,10 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
               <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Public</Text>
               <Switch
                 value={isPublic}
-                onValueChange={handlePublicToggle}
+                onValueChange={(value) => {
+                  setIsPublic(value);
+                  handleSettingsSave({ isPublic: value });
+                }}
                 trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
                 thumbColor={isPublic ? colors.primary : colors.backgroundTertiary}
               />
@@ -323,7 +310,10 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
               <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Notify on new</Text>
               <Switch
                 value={notifyOnNew}
-                onValueChange={handleNotifyToggle}
+                onValueChange={(value) => {
+                  setNotifyOnNew(value);
+                  handleSettingsSave({ notifyOnNew: value });
+                }}
                 trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
                 thumbColor={notifyOnNew ? colors.primary : colors.backgroundTertiary}
               />
@@ -335,7 +325,10 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
       {/* Sort order dropdown */}
       <SortOrderDropdown
         value={sortOrder}
-        onChange={handleSortOrderChange}
+        onChange={(value) => {
+          setSortOrder(value);
+          handleSettingsSave({ sortOrder: value });
+        }}
         isOpen={isSortOrderOpen}
         toggleOpen={() => setIsSortOrderOpen(!isSortOrderOpen)}
         colors={colors}
@@ -355,6 +348,15 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           }
         />
       )}
+
+      {/* Settings Modal */}
+      <ListSettingsModal
+        visible={isSettingsModalVisible}
+        onClose={() => setIsSettingsModalVisible(false)}
+        list={list}
+        onSave={handleSettingsSave}
+        isOwner={list.isOwner()}
+      />
     </SafeAreaView>
   );
 };
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   headerRight: {
-    width: 40,
+    padding: 8,
   },
   detailsSection: {
     padding: 16,
