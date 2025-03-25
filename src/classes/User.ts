@@ -95,9 +95,33 @@ export class User {
 
     public addList(list: List) {
         this._listMap.set(list.id, list);
+        const folder = this.getFolder(list.folderID);
+        if (folder) {
+            folder.listsIDs.push(list.id);
+        } else {
+            throw new Error('Folder not found');
+        }
     }
     public removeList(list: List) {
         this._listMap.delete(list.id);
+    }
+
+    public addFolder(folder: Folder) {
+        if (folder.parentFolderID === null) {
+            this._rootFolders.push(folder);
+        } else {
+            const parentFolder = this.getFolder(folder.parentFolderID);
+            if (parentFolder) {
+                parentFolder.subFolders.push(folder);
+            } else {
+                throw new Error('Parent folder not found');
+            }
+        }
+    }
+
+    public getFolder(folderId: string) {
+        const folders = this.getAllFolders();
+        return folders.find(f => f.id === folderId);
     }
 
     public getList(listId: string) {
@@ -106,7 +130,7 @@ export class User {
 
     public getAllFolders() {
         const folders = [...this._rootFolders];
-        for (const folder of this._rootFolders) {
+        for (const folder of folders) {
             folders.push(...folder.subFolders);
         }
         return folders;

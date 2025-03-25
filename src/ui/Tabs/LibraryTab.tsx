@@ -143,19 +143,13 @@ const LibraryScreen = () => {
 
   const handleFolderCreated = (folder: Folder) => {
     if (currentUser) {
-      currentUser.rootFolders.push(folder);
+      currentUser.addFolder(folder);
     }
   };
 
   const handleListCreated = (list: List) => {
     if (currentUser) {
-      currentUser.listMap.set(list.id, list);
-      if (list.folderID) {
-        const folder = currentUser.rootFolders.find(f => f.id === list.folderID);
-        if (folder) {
-          folder.listsIDs.push(list.id);
-        }
-      }
+      currentUser.addList(list);
     }
   };
 

@@ -428,22 +428,8 @@ export async function addListToFolder(ownerID: string, folderID: string, listID:
       .single();
     
     if (listError || !listData) {
-      console.log(`List ${listID} doesn't exist, creating a default list`);
-      let title = "Default List";
-      if (listID === "761a664b-a03b-422f-ad90-f4bef41494d5") {
-        title = "Quotes";
-      } else if (listID === "e9b7f235-6c0d-42d3-8b2a-c84ac8d267ff") {
-        title = "Poems";
-      } else if (listID === "2ba759e5-ec09-431d-b086-838a7e645c7f") {
-        title = "Insights";
-      }
-      await supabase.from('lists').insert({
-        id: listID,
-        ownerid: ownerID,
-        title: title,
-        description: "Default list created automatically",
-        ispublic: false
-      });
+      console.error('Error adding list to folder:', listError);
+      throw new Error('List not found');
     }
     
     // Now add the list to the folder with additional personal configuration in librarylists
@@ -654,7 +640,7 @@ export async function getPublicListsBySubstring(substring: string): Promise<List
     new Date(list.createdat), 
     new Date(list.updatedat),
     null, // currentUserID
-    null, // folderID
+    '', // folderID
     "date-first", // default sortOrder
     false, // today
     null, // currentItem
@@ -691,7 +677,7 @@ export async function getPublicListsByUser(userId: string, viewerUserId?: string
       new Date(list.createdat), 
       new Date(list.updatedat),
       viewerUserId || null, // currentUserID (the user viewing the list)
-      null, // folderID
+      '', // folderID
       "date-first", // default sortOrder
       false, // today
       null, // currentItem
@@ -721,7 +707,7 @@ export async function getUserListsBySubstring(userID: string, substring: string)
     new Date(list.createdat), 
     new Date(list.updatedat),
     userID, // currentUserID
-    null, // folderID
+    '', // folderID
     "date-first", // default sortOrder
     false, // today
     null, // currentItem

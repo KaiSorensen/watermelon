@@ -33,7 +33,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
   const { colors } = useColors();
   const { currentUser } = useAuth();
   const [listName, setListName] = useState('');
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
 
   const handleCreate = async () => {
@@ -61,14 +61,11 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
 
     try {
       await storeNewList(newList);
-      if (selectedFolderId) {
-        await addListToFolder(currentUser.id, selectedFolderId, newList.id);
-      }
       onListCreated(newList);
       onClose();
       // Reset form
       setListName('');
-      setSelectedFolderId(null);
+      setSelectedFolderId('');
     } catch (error) {
       console.error('Error creating list:', error);
     }
@@ -129,7 +126,7 @@ const CreateListModal: React.FC<CreateListModalProps> = ({
                   <TouchableOpacity
                     style={[styles.dropdownItem, { borderBottomColor: colors.divider }]}
                     onPress={() => {
-                      setSelectedFolderId(null);
+                      setSelectedFolderId('');
                       setIsFolderDropdownOpen(false);
                     }}
                   >

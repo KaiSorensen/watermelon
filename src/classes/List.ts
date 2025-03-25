@@ -15,7 +15,7 @@ export class List {
     
     // LibraryList specific properties
     private _currentUserID: string | null; // The ID of the user who added this list to their library
-    private _folderID: string | null;      // The folder this list is in for the current user
+    private _folderID: string;      // The folder this list is in for the current user
     private _sortOrder: SortOrder;
     private _today: boolean;
     private _currentItem: string | null;
@@ -35,7 +35,7 @@ export class List {
         createdAt: Date,
         updatedAt: Date,
         currentUserID: string | null = null,
-        folderID: string | null = null,
+        folderID: string,
         sortOrder: SortOrder = "date-first",
         today: boolean = false,
         currentItem: string | null = null,
@@ -71,7 +71,7 @@ export class List {
     get createdAt(): Date { return this._createdAt; }
     get updatedAt(): Date { return this._updatedAt; }
     get currentUserID(): string | null { return this._currentUserID; }
-    get folderID(): string | null { return this._folderID; }
+    get folderID(): string { return this._folderID; }
     get orderIndex(): number { return this._orderIndex; }
     set orderIndex(value: number) { this._orderIndex = value; }
 
