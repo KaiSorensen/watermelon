@@ -12,12 +12,13 @@ import {
   ScrollView,
   Dimensions,
   Platform,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import { User } from '../../classes/User';
-import { getItemsInList, retrieveUser } from '../../supabase/databaseService';
+import { getItemsInList, retrieveUser, storeNewItem, deleteItem } from '../../supabase/databaseService';
 import ListImage from '../components/ListImage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/UserContext';
@@ -25,6 +26,7 @@ import { useColors } from '../../contexts/ColorContext';
 import ItemScreen from './ItemScreen';
 import UserScreen from './UserScreen';
 import ListSettingsModal from '../components/ListSettingsModal';
+import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to strip HTML tags for plain text display
 const stripHtml = (html: string): string => {
@@ -108,6 +110,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const [listOwner, setListOwner] = useState<User | null>(null);
   const [showingUserScreen, setShowingUserScreen] = useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Local state for list properties that can be modified
   const [isToday, setIsToday] = useState(list.today || false);
@@ -171,6 +174,60 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     }
   };
 
+  // Function to handle adding a new item
+  const handleAddItem = async () => {
+    if (!currentUser || currentUser.id !== list.ownerID) return;
+
+    const newItem = new Item(
+      uuidv4(),
+      list.id,
+      'New Item',
+      '<p></p>',
+      [],
+      0,
+      new Date(),
+      new Date()
+    );
+
+    try {
+      await storeNewItem(newItem);
+      setItems([...items, newItem]);
+      setSelectedItem(newItem);
+    } catch (error) {
+      console.error('Error creating new item:', error);
+      Alert.alert('Error', 'Failed to create new item. Please try again.');
+    }
+  };
+
+  // Function to handle deleting an item
+  const handleDeleteItem = async (item: Item) => {
+    if (!currentUser || currentUser.id !== list.ownerID) return;
+
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to delete this item?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteItem(item.id);
+              setItems(items.filter(i => i.id !== item.id));
+            } catch (error) {
+              console.error('Error deleting item:', error);
+              Alert.alert('Error', 'Failed to delete item. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // Render an item row
   const renderItem = ({ item }: { item: Item }) => (
     <TouchableOpacity 
@@ -178,7 +235,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         backgroundColor: colors.card,
         shadowColor: colors.shadow
       }]}
-      onPress={() => setSelectedItem(item)}
+      onPress={() => !isEditMode && setSelectedItem(item)}
     >
       <View style={styles.resultContent}>
         <Text style={[styles.resultTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -188,7 +245,16 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           {stripHtml(item.content)}
         </Text>
       </View>
-      <Icon name="chevron-forward" size={24} color={colors.iconSecondary} />
+      {isEditMode ? (
+        <TouchableOpacity 
+          onPress={() => handleDeleteItem(item)}
+          style={styles.deleteButton}
+        >
+          <Icon name="trash-outline" size={24} color={colors.error} />
+        </TouchableOpacity>
+      ) : (
+        <Icon name="chevron-forward" size={24} color={colors.iconSecondary} />
+      )}
     </TouchableOpacity>
   );
 
@@ -210,7 +276,8 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
           setSelectedItem(null);
           // Refresh items list when returning from ItemScreen
           fetchItems();
-        }} 
+        }}
+        canEdit={!!(currentUser && currentUser.id === list.ownerID)}
       />
     );
   }
@@ -227,12 +294,34 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
           {list.title}
         </Text>
-        <TouchableOpacity 
-          style={styles.headerRight} 
-          onPress={() => setIsSettingsModalVisible(true)}
-        >
-          <Icon name="settings-outline" size={24} color={colors.iconPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {currentUser && currentUser.id === list.ownerID && (
+            <>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={handleAddItem}
+              >
+                <Icon name="add" size={24} color={colors.iconPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => setIsEditMode(!isEditMode)}
+              >
+                <Icon 
+                  name={isEditMode ? "checkmark" : "pencil"} 
+                  size={24} 
+                  color={colors.iconPrimary} 
+                />
+              </TouchableOpacity>
+            </>
+          )}
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => setIsSettingsModalVisible(true)}
+          >
+            <Icon name="settings-outline" size={24} color={colors.iconPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
       
       {/* List details section */}
@@ -382,6 +471,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
     padding: 8,
   },
   detailsSection: {
@@ -523,7 +616,7 @@ const styles = StyleSheet.create({
   resultDescription: {
     fontSize: 14,
   },
-  actionButton: {
+  deleteButton: {
     padding: 8,
   },
 });

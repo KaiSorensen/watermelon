@@ -19,6 +19,7 @@ import { useColors } from '../../contexts/ColorContext';
 interface ItemScreenProps {
   item: Item;
   onBack?: () => void;
+  canEdit?: boolean;
 }
 
 // Helper function to strip HTML tags for plain text display
@@ -26,7 +27,7 @@ const stripHtml = (html: string): string => {
   return html.replace(/<[^>]*>?/gm, '');
 };
 
-const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
+const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack, canEdit = false }) => {
   const { colors, isDarkMode } = useColors();
   const [title, setTitle] = useState<string>(item.title || '');
   const [content, setContent] = useState<string>(stripHtml(item.content || ''));
@@ -119,7 +120,7 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
           {isSaving ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            hasChanges && (
+            hasChanges && canEdit && (
               <TouchableOpacity 
                 onPress={saveChanges} 
                 style={[styles.saveButton, { backgroundColor: colors.primary }]}
@@ -134,7 +135,13 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         {/* Title Input */}
         <TextInput
-          style={[styles.titleInput, { color: colors.textPrimary }]}
+          style={[
+            styles.titleInput, 
+            { 
+              color: colors.textPrimary,
+              opacity: canEdit ? 1 : 0.7
+            }
+          ]}
           value={title}
           onChangeText={handleTitleChange}
           placeholder="Title"
@@ -142,6 +149,7 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
           multiline={false}
           maxLength={100}
           returnKeyType="next"
+          editable={canEdit}
         />
         
         {/* Separator Line */}
@@ -149,7 +157,13 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
         
         {/* Content Input */}
         <TextInput
-          style={[styles.contentInput, { color: colors.textPrimary }]}
+          style={[
+            styles.contentInput, 
+            { 
+              color: colors.textPrimary,
+              opacity: canEdit ? 1 : 0.7
+            }
+          ]}
           value={content}
           onChangeText={handleContentChange}
           placeholder="Start typing..."
@@ -158,6 +172,7 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack }) => {
           textAlignVertical="top"
           autoCapitalize="sentences"
           autoCorrect={true}
+          editable={canEdit}
         />
       </ScrollView>
     </SafeAreaView>
