@@ -13,12 +13,14 @@ import {
   Dimensions,
   Platform,
   Image,
-  Alert
+  Alert,
+  Modal
 } from 'react-native';
 import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
 import { User } from '../../classes/User';
-import { getItemsInList, retrieveUser, storeNewItem, deleteItem } from '../../supabase/databaseService';
+import { Folder } from '../../classes/Folder';
+import { getItemsInList, retrieveUser, storeNewItem, deleteItem, addListToFolder, removeListFromFolder, deleteList } from '../../supabase/databaseService';
 import ListImage from '../components/ListImage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/UserContext';
@@ -27,6 +29,7 @@ import ItemScreen from './ItemScreen';
 import UserScreen from './UserScreen';
 import ListSettingsModal from '../components/ListSettingsModal';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '../../supabase/supabase';
 
 // Helper function to strip HTML tags for plain text display
 const stripHtml = (html: string): string => {
@@ -100,6 +103,101 @@ interface ListScreenProps {
   onBack?: () => void;
 }
 
+// Add new AddToLibraryModal component
+interface AddToLibraryModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onAdd: (folderId: string) => void;
+  folders: Folder[];
+}
+
+const AddToLibraryModal: React.FC<AddToLibraryModalProps> = ({
+  visible,
+  onClose,
+  onAdd,
+  folders,
+}) => {
+  const { colors } = useColors();
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add to Library</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color={colors.iconPrimary} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.modalBody}>
+            <View style={[styles.inputContainer, { borderBottomColor: colors.divider }]}>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>Select Folder</Text>
+              <TouchableOpacity
+                style={[styles.dropdownButton, { backgroundColor: colors.backgroundSecondary }]}
+                onPress={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+              >
+                <Text style={[styles.dropdownButtonText, { color: colors.textPrimary }]}>
+                  {selectedFolderId ? 
+                    folders.find(f => f.id === selectedFolderId)?.name || 'Unknown' : 
+                    'Select a folder'}
+                </Text>
+                <Icon
+                  name={isFolderDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                  size={24}
+                  color={colors.iconSecondary}
+                />
+              </TouchableOpacity>
+              
+              {isFolderDropdownOpen && (
+                <View style={[styles.dropdownContent, { backgroundColor: colors.backgroundSecondary }]}>
+                  {folders.map(folder => (
+                    <TouchableOpacity
+                      key={folder.id}
+                      style={[styles.dropdownItem, { borderBottomColor: colors.divider }]}
+                      onPress={() => {
+                        setSelectedFolderId(folder.id);
+                        setIsFolderDropdownOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, { color: colors.textPrimary }]}>
+                        {folder.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { backgroundColor: colors.primary }
+              ]}
+              onPress={() => {
+                if (selectedFolderId) {
+                  onAdd(selectedFolderId);
+                  onClose();
+                }
+              }}
+              disabled={!selectedFolderId}
+            >
+              <Text style={styles.addButtonText}>Add to Library</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const { currentUser } = useAuth();
   const { colors, isDarkMode } = useColors();
@@ -111,6 +209,8 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   const [showingUserScreen, setShowingUserScreen] = useState(false);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddToLibraryModalVisible, setIsAddToLibraryModalVisible] = useState(false);
+  const [userFolders, setUserFolders] = useState<Folder[]>([]);
   
   // Local state for list properties that can be modified
   const [isToday, setIsToday] = useState(list.today || false);
@@ -122,6 +222,9 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
   useEffect(() => {
     fetchItems();
     fetchListOwner();
+    if (currentUser) {
+      fetchUserFolders();
+    }
   }, []);
 
   // Function to fetch items
@@ -147,6 +250,37 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
       }
     } catch (error) {
       console.error('Error fetching list owner:', error);
+    }
+  };
+
+  // Function to fetch user's folders
+  const fetchUserFolders = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('folders')
+        .select('*')
+        .eq('ownerid', currentUser.id)
+        .order('createdat', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching user folders:', error);
+        return;
+      }
+      
+      const folders = data.map(folder => new Folder(
+        folder.id,
+        folder.ownerid,
+        folder.parentfolderid,
+        folder.name,
+        new Date(folder.createdat),
+        new Date(folder.updatedat)
+      ));
+      
+      setUserFolders(folders);
+    } catch (error) {
+      console.error('Error fetching user folders:', error);
     }
   };
 
@@ -221,6 +355,79 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
             } catch (error) {
               console.error('Error deleting item:', error);
               Alert.alert('Error', 'Failed to delete item. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Function to handle adding list to library
+  const handleAddToLibrary = async (folderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await addListToFolder(currentUser.id, folderId, list.id);
+      // Refresh the list to update its library status
+      await list.refresh();
+    } catch (error) {
+      console.error('Error adding list to library:', error);
+      Alert.alert('Error', 'Failed to add list to library. Please try again.');
+    }
+  };
+
+  // Function to handle removing list from library
+  const handleRemoveFromLibrary = async () => {
+    if (!currentUser || !list.folderID) return;
+
+    Alert.alert(
+      'Remove from Library',
+      'Are you sure you want to remove this list from your library?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeListFromFolder(currentUser.id, list.folderID, list.id);
+              // Refresh the list to update its library status
+              await list.refresh();
+            } catch (error) {
+              console.error('Error removing list from library:', error);
+              Alert.alert('Error', 'Failed to remove list from library. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Function to handle deleting list
+  const handleDeleteList = async () => {
+    if (!currentUser || currentUser.id !== list.ownerID) return;
+
+    Alert.alert(
+      'Delete List',
+      'Are you sure you want to delete this list? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteList(list.id);
+              if (onBack) onBack();
+            } catch (error) {
+              console.error('Error deleting list:', error);
+              Alert.alert('Error', 'Failed to delete list. Please try again.');
             }
           }
         }
@@ -315,12 +522,23 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
               </TouchableOpacity>
             </>
           )}
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => setIsSettingsModalVisible(true)}
-          >
-            <Icon name="settings-outline" size={24} color={colors.iconPrimary} />
-          </TouchableOpacity>
+          {currentUser && (
+            currentUser.id === list.ownerID ? (
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => setIsSettingsModalVisible(true)}
+              >
+                <Icon name="settings-outline" size={24} color={colors.iconPrimary} />
+              </TouchableOpacity>
+            ) : !list.folderID && (
+              <TouchableOpacity 
+                style={styles.headerButton}
+                onPress={() => setIsAddToLibraryModalVisible(true)}
+              >
+                <Icon name="add-circle-outline" size={24} color={colors.iconPrimary} />
+              </TouchableOpacity>
+            )
+          )}
         </View>
       </View>
       
@@ -445,6 +663,16 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         list={list}
         onSave={handleSettingsSave}
         isOwner={list.isOwner()}
+        onRemoveFromLibrary={handleRemoveFromLibrary}
+        onDeleteList={handleDeleteList}
+      />
+
+      {/* Add to Library Modal */}
+      <AddToLibraryModal
+        visible={isAddToLibraryModalVisible}
+        onClose={() => setIsAddToLibraryModalVisible(false)}
+        onAdd={handleAddToLibrary}
+        folders={userFolders}
       />
     </SafeAreaView>
   );
@@ -618,6 +846,90 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 16,
+  },
+  inputContainer: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: 48,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+  },
+  dropdownContent: {
+    marginTop: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+  },
+  addButton: {
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

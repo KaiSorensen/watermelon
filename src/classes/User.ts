@@ -97,13 +97,19 @@ export class User {
         this._listMap.set(list.id, list);
         const folder = this.getFolder(list.folderID);
         if (folder) {
-            folder.listsIDs.push(list.id);
+            folder.addList(list);
         } else {
             throw new Error('Folder not found');
         }
     }
     public removeList(list: List) {
         this._listMap.delete(list.id);
+        const folder = this.getFolder(list.folderID);
+        if (folder) {
+            folder.removeList(list);
+        } else {
+            throw new Error('Folder not found');
+        }
     }
 
     public addFolder(folder: Folder) {
@@ -113,6 +119,19 @@ export class User {
             const parentFolder = this.getFolder(folder.parentFolderID);
             if (parentFolder) {
                 parentFolder.subFolders.push(folder);
+            } else {
+                throw new Error('Parent folder not found');
+            }
+        }
+    }
+
+    public removeFolder(folder: Folder) {
+        if (folder.parentFolderID === null) {
+            this._rootFolders = this._rootFolders.filter(f => f.id !== folder.id);
+        } else {
+            const parentFolder = this.getFolder(folder.parentFolderID);
+            if (parentFolder) {
+                parentFolder.subFolders = parentFolder.subFolders.filter(f => f.id !== folder.id);
             } else {
                 throw new Error('Parent folder not found');
             }
@@ -135,7 +154,7 @@ export class User {
         }
         return folders;
     }
-    
+
     public getTodayLists() {
         return Array.from(this._listMap.values()).filter(l => l.today);
     }

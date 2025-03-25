@@ -95,4 +95,15 @@ export class Folder {
         this._parentFolderID = data.parentFolderID;
         this._updatedAt = data.updatedAt;
     }
+
+    public addList(list: List) {
+        this._listsIDs.push(list.id);
+    }
+    public removeList(list: List) {
+        this._listsIDs = this._listsIDs.filter(id => id !== list.id);
+    }
+
+    public isEmpty(): boolean {
+        return this._listsIDs.length === 0 && this._subFolders.length === 0;
+    }
 }

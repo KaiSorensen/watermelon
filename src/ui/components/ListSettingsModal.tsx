@@ -8,10 +8,13 @@ import {
   ScrollView,
   Switch,
   Platform,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { List } from '../../classes/List';
 import { useColors } from '../../contexts/ColorContext';
+import { useAuth } from '../../contexts/UserContext';
+import { removeListFromFolder, deleteList } from '../../supabase/databaseService';
 
 // Define type for sort order
 type SortOrderType = "date-first" | "date-last" | "alphabetical" | "manual";
@@ -81,6 +84,8 @@ interface ListSettingsModalProps {
   list: List;
   onSave: (updates: Partial<List>) => void;
   isOwner: boolean;
+  onRemoveFromLibrary: () => void;
+  onDeleteList: () => void;
 }
 
 const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
@@ -89,8 +94,16 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
   list,
   onSave,
   isOwner,
+  onRemoveFromLibrary,
+  onDeleteList,
 }) => {
   const { colors } = useColors();
+  const { currentUser } = useAuth();
+  const [isPublic, setIsPublic] = useState(false);
+  const [notifyOnNew, setNotifyOnNew] = useState(false);
+  const [notifyTime, setNotifyTime] = useState<string>('09:00');
+  const [notifyDays, setNotifyDays] = useState<number[]>([]);
+  const [sortOrder, setSortOrder] = useState<'date-first' | 'date-last'>('date-first');
   const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
   
   // Local state for immediate feedback
@@ -110,6 +123,34 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
       sortOrder: list.sortOrder as SortOrderType,
     });
   }, [visible, list]);
+
+  const handleRemoveFromLibrary = async () => {
+    if (!list || !currentUser) return;
+
+    try {
+      await removeListFromFolder(currentUser.id, list.folderID, list.id);
+      currentUser.removeList(list);
+      onRemoveFromLibrary();
+      onClose();
+    } catch (error) {
+      console.error('Error removing list from library:', error);
+      Alert.alert('Error', 'Failed to remove list from library. Please try again.');
+    }
+  };
+
+  const handleDeleteList = async () => {
+    if (!list || !currentUser) return;
+
+    try {
+      await deleteList(list.id);
+      currentUser.removeList(list);
+      onDeleteList();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting list:', error);
+      Alert.alert('Error', 'Failed to delete list. Please try again.');
+    }
+  };
 
   // Owner settings section
   const renderOwnerSettings = () => (
@@ -221,6 +262,16 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
           <ScrollView style={styles.modalBody}>
             {isOwner && renderOwnerSettings()}
             {renderLibrarySettings()}
+            
+            {/* Remove/Delete Button */}
+            <TouchableOpacity
+              style={[styles.dangerButton, { backgroundColor: colors.error }]}
+              onPress={isOwner ? handleDeleteList : handleRemoveFromLibrary}
+            >
+              <Text style={styles.dangerButtonText}>
+                {isOwner ? 'Delete List' : 'Remove From Library'}
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -322,6 +373,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   dropdownOptionTextSelected: {
+    fontWeight: '600',
+  },
+  dangerButton: {
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  dangerButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

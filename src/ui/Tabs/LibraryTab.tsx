@@ -10,16 +10,19 @@ import {
   SafeAreaView,
   Modal,
   Platform,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../../contexts/UserContext';
 import { useColors } from '../../contexts/ColorContext';
 import { Folder } from '../../classes/Folder';
 import { List } from '../../classes/List';
+import { supabase } from '../../supabase/supabase';
 import Icon from 'react-native-vector-icons/Ionicons';
 import UserSettingsScreen from '../screens/UserSettingsScreen';
 import ListScreen from '../screens/ListScreen';
 import CreateFolderModal from '../components/CreateFolderModal';
 import CreateListModal from '../components/CreateListModal';
+import { deleteFolder } from '../../supabase/databaseService';
 
 const LibraryScreen = () => {
   const { currentUser, loading } = useAuth();
@@ -94,15 +97,49 @@ const LibraryScreen = () => {
     </TouchableOpacity>
   );
 
+  const handleDeleteFolder = async (folder: Folder) => {
+    if (!currentUser) return;
+
+    Alert.alert(
+      'Delete Folder',
+      'Are you sure you want to delete this folder? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFolder(folder.id);
+              if (currentUser) {
+                currentUser.removeFolder(folder);
+                const newExpandedFolders = new Set(expandedFolders);
+                newExpandedFolders.delete(folder.id);
+                setExpandedFolders(newExpandedFolders);
+              }
+            } catch (error) {
+              console.error('Error deleting folder:', error);
+              Alert.alert('Error', 'Failed to delete folder. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderFolderItem = (folder: Folder, level: number = 0) => {
     const paddingLeft = 16 + level * 20;
     const isExpanded = expandedFolders.has(folder.id);
+    const isEmpty = folder.subFolders.length === 0 && folder.listsIDs.length === 0;
 
     return (
       <View key={folder.id}>
         <TouchableOpacity
           style={[styles.folderItem, { paddingLeft, borderBottomColor: colors.divider }]}
-          onPress={() => toggleFolder(folder.id)}
+          onPress={() => !isEmpty && toggleFolder(folder.id)}
         >
           <Icon
             name={isExpanded ? 'folder-open-outline' : 'folder-outline'}
@@ -111,14 +148,23 @@ const LibraryScreen = () => {
             style={styles.folderIcon}
           />
           <Text style={[styles.folderName, { color: colors.textPrimary }]}>{folder.name}</Text>
-          <Icon
-            name={isExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
-            size={24}
-            color={colors.iconSecondary}
-          />
+          {isEmpty ? (
+            <TouchableOpacity 
+              onPress={() => handleDeleteFolder(folder)}
+              style={styles.deleteButton}
+            >
+              <Icon name="remove-circle-outline" size={24} color={colors.error} />
+            </TouchableOpacity>
+          ) : (
+            <Icon
+              name={isExpanded ? 'chevron-down-outline' : 'chevron-forward-outline'}
+              size={24}
+              color={colors.iconSecondary}
+            />
+          )}
         </TouchableOpacity>
 
-        {isExpanded && (
+        {isExpanded && !isEmpty && (
           <View style={[styles.folderContent, { backgroundColor: colors.backgroundSecondary }]}>
             {folder.subFolders.map(subFolder =>
               renderFolderItem(subFolder, level + 1)
@@ -421,6 +467,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  deleteButton: {
+    padding: 8,
   },
 });
 
