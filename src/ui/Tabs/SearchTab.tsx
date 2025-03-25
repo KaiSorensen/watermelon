@@ -1,20 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  FlatList, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
   ScrollView,
-  Image
+  Image,
+  Animated
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { 
-  getPublicListsBySubstring, 
-  getUserListsBySubstring, 
+import {
+  getPublicListsBySubstring,
+  getUserListsBySubstring,
   getLibraryItemsBySubstring,
   getUsersBySubstring
 } from '../../supabase/databaseService';
@@ -52,12 +53,14 @@ const SearchScreen = () => {
   const [selectedList, setSelectedList] = useState<List | null>(null);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isEasterEgg, setIsEasterEgg] = useState(false);
+  const pulseAnim = useState(new Animated.Value(1))[0];
 
   // Create a debounced search function
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
     debounce((term: string, filter: FilterType) => {
-      if (term.trim().length > 0) {
+      if (term.trim().length > 0 && term.trim() !== 'msjem') {
         performSearch(term, filter);
       } else {
         setResults([]);
@@ -68,16 +71,43 @@ const SearchScreen = () => {
 
   // Effect to trigger search when searchTerm or activeFilter changes
   useEffect(() => {
+    // Check for easter egg
+    if (searchTerm.trim() === 'msjem') {
+      setIsEasterEgg(true);
+      setResults([]);
+      setLoading(false);
+
+      // Start pulsing animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+
+      return;
+    } else {
+      setIsEasterEgg(false);
+    }
+
     debouncedSearch(searchTerm, activeFilter);
     return () => {
       debouncedSearch.cancel();
     };
-  }, [searchTerm, activeFilter, debouncedSearch]);
+  }, [searchTerm, activeFilter, debouncedSearch, pulseAnim]);
 
   // Main search function
   const performSearch = async (term: string, filter: FilterType) => {
     if (!term.trim() || !currentUser) return;
-    
+
     setLoading(true);
     try {
       let searchResults: SearchResult[] = [];
@@ -88,18 +118,18 @@ const SearchScreen = () => {
           // Search both user's lists and items
           const userLists = await getUserListsBySubstring(currentUser.id, term);
           const userItems = await getLibraryItemsBySubstring(currentUser, term);
-          
+
           // Add lists to results
           searchResults = [
             ...userLists.map(list => ({ type: 'list' as const, data: list })),
             ...userItems.map(item => ({ type: 'item' as const, data: item }))
           ];
-          
+
           // If we have fewer than 10 results, also search public lists and users
           if (searchResults.length < 10) {
             const publicLists = await getPublicListsBySubstring(term);
             const publicUsers = await getUsersBySubstring(term);
-            
+
             // Add public results, but prioritize user's own content
             searchResults = [
               ...searchResults,
@@ -110,14 +140,14 @@ const SearchScreen = () => {
             ];
           }
           break;
-          
+
         case 'lists':
           // Search user's lists first
           const ownLists = await getUserListsBySubstring(currentUser.id, term);
-          
+
           // Then search public lists
           const allPublicLists = await getPublicListsBySubstring(term);
-          
+
           // Combine results, prioritizing user's own lists
           searchResults = [
             ...ownLists.map(list => ({ type: 'list' as const, data: list })),
@@ -126,20 +156,20 @@ const SearchScreen = () => {
               .map(list => ({ type: 'list' as const, data: list }))
           ];
           break;
-          
+
         case 'items':
           // Only search items in user's library
           const items = await getLibraryItemsBySubstring(currentUser, term);
           searchResults = items.map(item => ({ type: 'item' as const, data: item }));
           break;
-          
+
         case 'users':
           // Search for users with public lists
           const users = await getUsersBySubstring(term);
           searchResults = users.map(user => ({ type: 'user' as const, data: user }));
           break;
       }
-      
+
       setResults(searchResults);
     } catch (error) {
       console.error('Error searching:', error);
@@ -155,14 +185,14 @@ const SearchScreen = () => {
 
   // Render different result types
   const renderListResult = (list: List) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.resultItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
       onPress={() => setSelectedList(list)}
     >
       {list.coverImageURL && (
-        <Image 
-          source={{ uri: list.coverImageURL }} 
-          style={styles.resultImage} 
+        <Image
+          source={{ uri: list.coverImageURL }}
+          style={styles.resultImage}
         />
       )}
       <View style={styles.resultContent}>
@@ -178,7 +208,7 @@ const SearchScreen = () => {
           </Text>
         </View>
       </View>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.actionButton}
         onPress={(e) => {
           e.stopPropagation(); // Prevent triggering the parent onPress
@@ -194,7 +224,7 @@ const SearchScreen = () => {
   const renderItemResult = (item: Item) => {
     console.log('Rendering item:', item.id, item.title, item.content?.substring(0, 50));
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.resultItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
         onPress={() => {
           console.log('Item pressed:', item.id);
@@ -210,7 +240,7 @@ const SearchScreen = () => {
             <Text style={[styles.metaText, { color: colors.textTertiary }]}>Item</Text>
           </View>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionButton}
           onPress={(e) => {
             e.stopPropagation(); // Prevent triggering the parent onPress
@@ -237,7 +267,7 @@ const SearchScreen = () => {
         <Text style={[styles.resultTitle, { color: colors.textPrimary }]}>{user.username}</Text>
         <Text style={[styles.resultDescription, { color: colors.textSecondary }]}>User with public lists</Text>
       </View>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.actionButton}
         onPress={() => setSelectedUser(user)}
       >
@@ -286,12 +316,12 @@ const SearchScreen = () => {
   if (selectedItem) {
     console.log('Showing ItemScreen for item:', selectedItem.id);
     return (
-      <ItemScreen 
-        item={selectedItem} 
+      <ItemScreen
+        item={selectedItem}
         onBack={() => {
           console.log('Back from ItemScreen');
           setSelectedItem(null);
-        }} 
+        }}
       />
     );
   }
@@ -299,8 +329,8 @@ const SearchScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search Bar */}
-      <View style={[styles.searchBar, { 
-        backgroundColor: colors.inputBackground, 
+      <View style={[styles.searchBar, {
+        backgroundColor: colors.inputBackground,
         shadowColor: colors.shadow,
         borderColor: colors.inputBorder,
         borderWidth: 1
@@ -317,7 +347,7 @@ const SearchScreen = () => {
           autoCorrect={false}
         />
         {searchTerm.length > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setSearchTerm('')}
             style={styles.clearButton}
           >
@@ -327,8 +357,8 @@ const SearchScreen = () => {
       </View>
 
       {/* Filter Chips */}
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipsContainer}
       >
@@ -339,7 +369,7 @@ const SearchScreen = () => {
           ]}
           onPress={() => handleFilterChange('library')}
         >
-          <Text 
+          <Text
             style={[
               styles.chipText,
               { color: activeFilter === 'library' ? 'white' : colors.textSecondary }
@@ -348,7 +378,7 @@ const SearchScreen = () => {
             Library
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.chip,
@@ -356,7 +386,7 @@ const SearchScreen = () => {
           ]}
           onPress={() => handleFilterChange('lists')}
         >
-          <Text 
+          <Text
             style={[
               styles.chipText,
               { color: activeFilter === 'lists' ? 'white' : colors.textSecondary }
@@ -365,7 +395,7 @@ const SearchScreen = () => {
             Lists
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.chip,
@@ -373,7 +403,7 @@ const SearchScreen = () => {
           ]}
           onPress={() => handleFilterChange('items')}
         >
-          <Text 
+          <Text
             style={[
               styles.chipText,
               { color: activeFilter === 'items' ? 'white' : colors.textSecondary }
@@ -382,7 +412,7 @@ const SearchScreen = () => {
             Items
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.chip,
@@ -390,7 +420,7 @@ const SearchScreen = () => {
           ]}
           onPress={() => handleFilterChange('users')}
         >
-          <Text 
+          <Text
             style={[
               styles.chipText,
               { color: activeFilter === 'users' ? 'white' : colors.textSecondary }
@@ -402,7 +432,16 @@ const SearchScreen = () => {
       </ScrollView>
 
       {/* Results or Empty State */}
-      {results.length > 0 ? (
+      {isEasterEgg ? (
+        <View style={styles.content}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <Icon name="rocket" size={80} color={colors.primary} />
+          </Animated.View>
+          <Text style={[styles.easterEggTitle, { color: colors.textPrimary, fontSize: 30 }]}>
+            Miss you boo bear &lt;3
+          </Text>
+        </View>
+      ) : results.length > 0 ? (
         <FlatList
           data={results}
           renderItem={renderSearchResult}
@@ -557,6 +596,27 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: 20,
+  },
+  easterEggTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  easterEggMessage: {
+    fontSize: 18,
+    marginTop: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  easterEggInfo: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  easterEggSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
 

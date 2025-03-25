@@ -1,9 +1,3 @@
--- Default data for user with UUID generation
--- This script creates a default set of folders, lists, and items for a new user
--- It will be used when a new user is created in the system
--- Data is based on src/DefaultData.json
-
--- Declare variables to store generated UUIDs
 DO $$
 DECLARE
     user_id UUID;
@@ -13,7 +7,7 @@ DECLARE
     poems_list_id UUID;
     insights_list_id UUID;
 BEGIN
-    -- Insert the user with a specific UUID (this is the only hardcoded UUID we need)
+    -- Insert the user with a specific UUID
     user_id := '7dc7a90c-1385-4e53-bb1f-e7c8dcc7015d';
     
     INSERT INTO Users (id, username, email, avatarURL, notifsEnabled)
@@ -24,7 +18,7 @@ BEGIN
       NULL,
       FALSE
     );
-
+    
     -- Create the Wisdom folder
     INSERT INTO Folders (ownerID, parentFolderID, name)
     VALUES (
@@ -33,7 +27,7 @@ BEGIN
       'Wisdom'
     )
     RETURNING id INTO wisdom_folder_id;
-
+    
     -- Create the Notes folder
     INSERT INTO Folders (ownerID, parentFolderID, name)
     VALUES (
@@ -42,115 +36,88 @@ BEGIN
       'Notes'
     )
     RETURNING id INTO notes_folder_id;
-
-    -- Create the Quotes list
+    
+    -- Create the Quotes list (removed ownerOrder)
     INSERT INTO Lists (
       ownerID, 
       title, 
       description, 
       coverImageURL, 
-      isPublic, 
-      sortOrder, 
-      today, 
-      notifyOnNew, 
-      notifyTime, 
-      notifyDays
+      isPublic
     )
     VALUES (
       user_id,
       'Quotes',
       'Inspirational quotes to brighten your day',
       NULL,
-      TRUE,
-      'date-first',
-      FALSE,
-      FALSE,
-      NULL,
-      NULL
+      TRUE
     )
     RETURNING id INTO quotes_list_id;
-
-    -- Associate Quotes list with Wisdom folder
-    INSERT INTO FolderLists (ownerID, folderID, listID, orderIndex)
+    
+    -- Associate Quotes list with Wisdom folder via LibraryLists (added sortOrder)
+    INSERT INTO LibraryLists (ownerID, folderID, listID, orderIndex, sortOrder)
     VALUES (
       user_id,
       wisdom_folder_id,
       quotes_list_id,
-      0
+      0,
+      'date-first'
     );
-
+    
     -- Create the Poems list
     INSERT INTO Lists (
       ownerID, 
       title, 
       description, 
       coverImageURL, 
-      isPublic, 
-      sortOrder, 
-      today, 
-      notifyOnNew, 
-      notifyTime, 
-      notifyDays
+      isPublic
     )
     VALUES (
       user_id,
       'Poems',
       'A collection of beautiful poems',
       NULL,
-      TRUE,
-      'date-first',
-      FALSE,
-      FALSE,
-      NULL,
-      NULL
+      TRUE
     )
     RETURNING id INTO poems_list_id;
-
+    
     -- Create the Insights list
     INSERT INTO Lists (
       ownerID, 
       title, 
       description, 
       coverImageURL, 
-      isPublic, 
-      sortOrder, 
-      today, 
-      notifyOnNew, 
-      notifyTime, 
-      notifyDays
+      isPublic
     )
     VALUES (
       user_id,
       'Insights',
       'Personal insights and reflections',
       NULL,
-      TRUE,
-      'date-first',
-      FALSE,
-      FALSE,
-      NULL,
-      NULL
+      TRUE
     )
     RETURNING id INTO insights_list_id;
-
-    -- Associate Poems and Insights lists with Notes folder
-    INSERT INTO FolderLists (ownerID, folderID, listID, orderIndex)
+    
+    -- Associate Poems and Insights lists with Notes folder via LibraryLists (added sortOrder)
+    INSERT INTO LibraryLists (ownerID, folderID, listID, orderIndex, sortOrder)
     VALUES (
       user_id,
       notes_folder_id,
       poems_list_id,
-      0
+      0,
+      'date-first'
     );
-
-    INSERT INTO FolderLists (ownerID, folderID, listID, orderIndex)
+    
+    INSERT INTO LibraryLists (ownerID, folderID, listID, orderIndex, sortOrder)
     VALUES (
       user_id,
       notes_folder_id,
       insights_list_id,
-      1
+      1,
+      'date-first'
     );
-
-    -- Add items to Quotes list from DefaultData.json
+    
+    -- Add items to Quotes list
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -158,7 +125,7 @@ BEGIN
       'There are cathedrals everywhere for those with the eyes to see.',
       0
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -166,7 +133,7 @@ BEGIN
       'We are like butterflies who flutter for a day and think it is forever.',
       1
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -174,7 +141,7 @@ BEGIN
       'No man should judge unless he asks himself an absolute honesty whether, in a similar situation, he might not have done the same.',
       2
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -182,7 +149,7 @@ BEGIN
       'There is only one thing that I dread: not to be worthy of my sufferings.',
       3
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -190,7 +157,7 @@ BEGIN
       'Emotion, which is suffering, ceases to be suffering as soon as we form a clear and precise picture of it.',
       4
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -198,7 +165,7 @@ BEGIN
       'Study hard what interests you the most in the most undisciplined, irreverent, and original manner.',
       5
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -206,7 +173,7 @@ BEGIN
       'Words are, in my not-so-humble opinion, our most inexhaustible source of magic. Capable of both inflicting injury and remedying it.',
       6
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -214,7 +181,7 @@ BEGIN
       'Deep in the human unconscious is a pervasive need for a logical universe that makes sense. But the real universe is always one step beyond logic.',
       7
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -222,7 +189,7 @@ BEGIN
       'If you know the way broadly, you will see it in everything.',
       8
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -230,7 +197,7 @@ BEGIN
       'God doesn''t play dice with the universe.',
       9
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -238,7 +205,7 @@ BEGIN
       'Einstein, stop telling God what to do.',
       10
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -246,7 +213,7 @@ BEGIN
       'The line between good and evil runs through the heart of every man.',
       11
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -254,7 +221,7 @@ BEGIN
       'The convoluted wording of legalisms grew up around the necessity to hide from ourselves the violence we intend toward each other. Between depriving a man of one hour from his life and depriving him of his life there exists only a difference of degree. You have done violence to him, consumed his energy. Elaborate euphemisms may conceal your intent to kill, but behind any use of power over another the ultimate assumption remains: ''I feed on your energy.''',
       12
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -262,7 +229,7 @@ BEGIN
       'Even though you broke my heart yet again, in another life I would''ve really liked just doing laundry and taxes with you. I''m not kind because I''m naive; I''m kind because it''s strategic and necessary.',
       13
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -270,7 +237,7 @@ BEGIN
       'A rose by any other name would smell as sweet.',
       14
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -278,7 +245,7 @@ BEGIN
       'If you gaze long enough into the abyss, the abyss gazes back into you.',
       15
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -286,7 +253,7 @@ BEGIN
       'You have very little right to break rules, until you have mastered them.',
       16
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       quotes_list_id,
@@ -294,15 +261,15 @@ BEGIN
       'In all your ways acknowledge him, and he will make straight your paths.',
       17
     );
-
-    -- Add items to Poems list from DefaultData.json
+    
+    -- Add items to Poems list
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       poems_list_id,
       NULL,
       'I would give anything for your friendship
 You have no idea
- I would take a bullet just to let you live
+I would take a bullet just to let you live
 You''re worth it
 The countless drinks and times we had
 They''ll lift me up to Heaven
@@ -316,7 +283,7 @@ You marks on my soul age like leather
 I''ll love you forever',
       0
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       poems_list_id,
@@ -343,7 +310,7 @@ But I hope you remember all the times we had
 I know I will',
       1
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       poems_list_id,
@@ -355,8 +322,8 @@ Like a scene from the wild west
 I''ll take the old mountain road',
       2
     );
-
-    -- Add items to Insights list from DefaultData.json
+    
+    -- Add items to Insights list
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -364,7 +331,7 @@ I''ll take the old mountain road',
       'Tune into the absurd.',
       0
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -372,7 +339,7 @@ I''ll take the old mountain road',
       'Curiosity is the first victim of overstimulation.',
       1
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -380,7 +347,7 @@ I''ll take the old mountain road',
       'Worry not about the language of your visions, but rather the connection of your visions to present sensations.',
       2
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -388,7 +355,7 @@ I''ll take the old mountain road',
       'All I do is sit and dream about who I could be.',
       3
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -396,7 +363,7 @@ I''ll take the old mountain road',
       'Your love is given in the shape of your personality.',
       4
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -404,7 +371,7 @@ I''ll take the old mountain road',
       'From your stay in the wilderness, you take something with you in your heart that guides you thereafter.',
       5
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -412,7 +379,7 @@ I''ll take the old mountain road',
       'Woven into the fabric of beauty is the nature of truth.',
       6
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -420,7 +387,7 @@ I''ll take the old mountain road',
       'We live in such a beautiful world: physically, but also in the minds we inhabit. The depth of your eyes runs as deep as the ocean.',
       7
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -428,7 +395,7 @@ I''ll take the old mountain road',
       'I''m my own mystery.',
       8
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -436,7 +403,7 @@ I''ll take the old mountain road',
       'Be present, accept your burden, and give energy.',
       9
     );
-
+    
     INSERT INTO Items (listID, title, content, orderIndex)
     VALUES (
       insights_list_id,
@@ -445,6 +412,3 @@ I''ll take the old mountain road',
       10
     );
 END $$;
-
--- End of default data script
--- This script can be run whenever a new user is created to provide them with starter content

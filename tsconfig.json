@@ -1,3 +1,8 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "noImplicitAny": false,
+    "skipLibCheck": true
+  }
 }

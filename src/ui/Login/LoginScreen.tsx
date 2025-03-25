@@ -73,12 +73,15 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
           <View style={styles.contentContainer}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../assets/logo.png')}
+                source={require('../assets/Smirk_Cat_Emoji.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
               <Text style={[styles.appName, { color: colors.textPrimary }]}>
                 Of The Day
+              </Text>
+              <Text style={[styles.appName, { color: colors.secondary, fontSize: 16 }]}>
+                Don't kill yourself you're too pretty.
               </Text>
             </View>
             

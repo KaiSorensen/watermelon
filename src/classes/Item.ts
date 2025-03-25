@@ -3,7 +3,6 @@ import { retrieveItem, updateItem } from '../supabase/databaseService';
 export class Item {
     private _id: string;
     private _listID: string;
-    private _ownerID: string;
     private _title: string | null;
     private _content: string; // This will store HTML content for rich text
     private _imageURLs: string[] | null;
@@ -15,7 +14,6 @@ export class Item {
     constructor(
         id: string,
         listID: string,
-        ownerID: string,
         title: string | null,
         content: string,
         imageURLs: string[] | null,
@@ -25,7 +23,6 @@ export class Item {
     ) {
         this._id = id;
         this._listID = listID;
-        this._ownerID = ownerID;
         this._title = title;
         this._content = content || ''; // Ensure content is never null
         this._imageURLs = imageURLs;
@@ -45,7 +42,6 @@ export class Item {
         return new Item(
             data.id,
             data.listID,
-            data.ownerID,
             data.title,
             data.content || '', // Ensure content is never null
             data.imageURLs,
@@ -58,7 +54,6 @@ export class Item {
     // Getters for read-only properties
     get id(): string { return this._id; }
     get listID(): string { return this._listID; }
-    get ownerID(): string { return this._ownerID; }
     get createdAt(): Date { return this._createdAt; }
     get updatedAt(): Date { return this._updatedAt; }
 

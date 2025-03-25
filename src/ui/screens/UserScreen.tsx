@@ -17,6 +17,7 @@ import { supabase } from '../../supabase/supabase';
 import ListScreen from './ListScreen';
 import ListPreview from '../components/ListPreview';
 import { useColors } from '../../contexts/ColorContext';
+import { getPublicListsByUser } from '../../supabase/databaseService';
 
 interface UserScreenProps {
   user: User;
@@ -36,33 +37,7 @@ const UserScreen: React.FC<UserScreenProps> = ({ user, onBack }) => {
   const fetchPublicLists = async () => {
     setLoading(true);
     try {
-      // Fetch all public lists for this user
-      const { data, error } = await supabase
-        .from('lists')
-        .select('*')
-        .eq('ownerID', user.id)
-        .eq('isPublic', true);
-      
-      if (error) {
-        throw error;
-      }
-
-      const lists = data.map((list) => new List(
-        list.id, 
-        list.ownerID, 
-        list.title, 
-        list.description, 
-        list.coverImageURL, 
-        list.isPublic, 
-        list.sortOrder, 
-        new Date(list.createdAt), 
-        new Date(list.updatedAt), 
-        list.today, 
-        list.notifyOnNew, 
-        list.notifyTime ? new Date(list.notifyTime) : null, 
-        list.notifyDays
-      ));
-
+      const lists = await getPublicListsByUser(user.id, user.id);
       setPublicLists(lists);
     } catch (error) {
       console.error('Error fetching public lists:', error);

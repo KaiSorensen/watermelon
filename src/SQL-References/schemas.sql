@@ -1,9 +1,12 @@
-DROP TABLE IF EXISTS Users;
-DROP TABLE IF EXISTS Folders;
-DROP TABLE IF EXISTS Lists;
-DROP TABLE IF EXISTS Items;
-DROP TABLE IF EXISTS FolderLists;
 DROP TABLE IF EXISTS LibraryLists;
+
+DROP TABLE IF EXISTS Items;
+
+DROP TABLE IF EXISTS Lists;
+
+DROP TABLE IF EXISTS Folders;
+
+DROP TABLE IF EXISTS Users;
 
 CREATE TABLE Users (
   id UUID PRIMARY KEY,
@@ -18,7 +21,8 @@ CREATE TABLE Users (
 CREATE TABLE Folders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   ownerID UUID NOT NULL,
-  parentFolderID UUID,  -- NULL for root folders
+  parentFolderID UUID,
+  -- NULL for root folders
   listIDs UUID,
   name VARCHAR(255) NOT NULL,
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -34,18 +38,9 @@ CREATE TABLE Lists (
   description TEXT,
   coverImageURL VARCHAR(255),
   isPublic BOOLEAN NOT NULL DEFAULT FALSE,
-  ownerOrder VARCHAR(15) NOT NULL CHECK (
-    ownerOrder IN (
-      'date-first',
-      'date-last',
-      'alphabetical',
-      'manual'
-    )
-  ),
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  -- Flattened settings fields:
-  FOREIGN KEY (ownerID) REFERENCES Users(id) ON DELETE CASCADE,
+  FOREIGN KEY (ownerID) REFERENCES Users(id) ON DELETE CASCADE
 );
 
 -- folder_lists is a many-to-many relationship between folders and lists
@@ -58,6 +53,14 @@ CREATE TABLE LibraryLists (
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   -- Personal Configurations
+  sortOrder VARCHAR(15) NOT NULL CHECK (
+    sortOrder IN (
+      'date-first',
+      'date-last',
+      'alphabetical',
+      'manual'
+    )
+  ),
   today BOOLEAN NOT NULL DEFAULT FALSE,
   currentItem UUID,
   notifyOnNew BOOLEAN NOT NULL DEFAULT FALSE,
@@ -80,16 +83,16 @@ CREATE TABLE LibraryLists (
   FOREIGN KEY (listID) REFERENCES Lists(id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE Items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   listID UUID NOT NULL,
   title VARCHAR(255),
   content TEXT NOT NULL,
-  imageURLs TEXT [], -- PostgreSQL array; alternatively, store image URLs in a separate table
-  orderIndex INTEGER, -- the "manual" order of the item in the list
+  imageURLs TEXT [],
+  -- PostgreSQL array; alternatively, store image URLs in a separate table
+  orderIndex INTEGER,
+  -- the "manual" order of the item in the list
   createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (listID) REFERENCES Lists(id) ON DELETE CASCADE,
-  FOREIGN KEY (ownerID) REFERENCES Users(id) ON DELETE CASCADE
+  FOREIGN KEY (listID) REFERENCES Lists(id) ON DELETE CASCADE
 );
