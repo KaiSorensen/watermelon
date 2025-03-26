@@ -523,7 +523,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
             </>
           )}
           {currentUser && (
-            currentUser.id === list.ownerID ? (
+            currentUser.id === list.ownerID || list.folderID ? (
               <TouchableOpacity 
                 style={styles.headerButton}
                 onPress={() => setIsSettingsModalVisible(true)}
@@ -542,119 +542,63 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
         </View>
       </View>
       
-      {/* List details section */}
-      <View style={[styles.detailsSection, { borderBottomColor: colors.divider }]}>
-        <View style={styles.coverImageContainer}>
-          {list.coverImageURL ? (
-            <Image source={{ uri: list.coverImageURL }} style={styles.coverImage} />
-          ) : (
-            <View style={[styles.coverImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]} />
-          )}
+      {/* Scrollable content */}
+      <ScrollView style={styles.scrollContent}>
+        {/* List details section */}
+        <View style={[styles.detailsSection, { borderBottomColor: colors.divider }]}>
+          <View style={styles.coverImageContainer}>
+            {list.coverImageURL ? (
+              <Image source={{ uri: list.coverImageURL }} style={styles.coverImage} />
+            ) : (
+              <View style={[styles.coverImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]} />
+            )}
+          </View>
+          
+          <View style={styles.listInfo}>
+            <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
+            
+            {/* Owner info with profile link */}
+            {listOwner && (
+              <TouchableOpacity 
+                style={[styles.ownerContainer, { backgroundColor: colors.backgroundSecondary }]} 
+                onPress={() => setShowingUserScreen(true)}
+              >
+                <View style={[styles.ownerAvatarContainer, { backgroundColor: colors.backgroundTertiary }]}>
+                  {listOwner.avatarURL ? (
+                    <Image source={{ uri: listOwner.avatarURL }} style={styles.ownerAvatar} />
+                  ) : (
+                    <Text style={[styles.ownerAvatarText, { color: colors.textTertiary }]}>
+                      {listOwner.username.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.ownerName, { color: colors.textSecondary }]}>
+                  {listOwner.username}
+                </Text>
+                <Icon name="chevron-forward" size={16} color={colors.iconSecondary} />
+              </TouchableOpacity>
+            )}
+            
+            {list.description && (
+              <Text style={[styles.listDescription, { color: colors.textSecondary }]}>
+                {stripHtml(list.description)}
+              </Text>
+            )}
+          </View>
         </View>
         
-        <View style={styles.listInfo}>
-          <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
-          
-          {/* Owner info with profile link */}
-          {listOwner && (
-            <TouchableOpacity 
-              style={[styles.ownerContainer, { backgroundColor: colors.backgroundSecondary }]} 
-              onPress={() => setShowingUserScreen(true)}
-            >
-              <View style={[styles.ownerAvatarContainer, { backgroundColor: colors.backgroundTertiary }]}>
-                {listOwner.avatarURL ? (
-                  <Image source={{ uri: listOwner.avatarURL }} style={styles.ownerAvatar} />
-                ) : (
-                  <Text style={[styles.ownerAvatarText, { color: colors.textTertiary }]}>
-                    {listOwner.username.charAt(0).toUpperCase()}
-                  </Text>
-                )}
-              </View>
-              <Text style={[styles.ownerName, { color: colors.textSecondary }]}>
-                {listOwner.username}
-              </Text>
-              <Icon name="chevron-forward" size={16} color={colors.iconSecondary} />
-            </TouchableOpacity>
-          )}
-          
-          {list.description && (
-            <Text style={[styles.listDescription, { color: colors.textSecondary }]}>
-              {stripHtml(list.description)}
-            </Text>
-          )}
-        </View>
-      
-        {/* List controls section - only show if current user is the owner */}
-        {currentUser && currentUser.id === list.ownerID && (
-          <View style={styles.controlsSection}>
-            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
-              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Today</Text>
-              <Switch
-                value={isToday}
-                onValueChange={(value) => {
-                  setIsToday(value);
-                  handleSettingsSave({ today: value });
-                }}
-                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
-                thumbColor={isToday ? colors.primary : colors.backgroundTertiary}
-              />
-            </View>
-            
-            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
-              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Public</Text>
-              <Switch
-                value={isPublic}
-                onValueChange={(value) => {
-                  setIsPublic(value);
-                  handleSettingsSave({ isPublic: value });
-                }}
-                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
-                thumbColor={isPublic ? colors.primary : colors.backgroundTertiary}
-              />
-            </View>
-            
-            <View style={[styles.controlRow, { borderBottomColor: colors.divider }]}>
-              <Text style={[styles.controlLabel, { color: colors.textPrimary }]}>Notify on new</Text>
-              <Switch
-                value={notifyOnNew}
-                onValueChange={(value) => {
-                  setNotifyOnNew(value);
-                  handleSettingsSave({ notifyOnNew: value });
-                }}
-                trackColor={{ false: colors.backgroundSecondary, true: `${colors.primary}80` }}
-                thumbColor={notifyOnNew ? colors.primary : colors.backgroundTertiary}
-              />
-            </View>
+        {/* Items list */}
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        ) : (
+          <View style={styles.itemsContainer}>
+            {items.map((item) => renderItem({ item }))}
+            {items.length === 0 && (
+              <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>No items in this list yet</Text>
+            )}
           </View>
         )}
-      </View>
-      
-      {/* Sort order dropdown */}
-      <SortOrderDropdown
-        value={sortOrder}
-        onChange={(value) => {
-          setSortOrder(value);
-          handleSettingsSave({ sortOrder: value });
-        }}
-        isOpen={isSortOrderOpen}
-        toggleOpen={() => setIsSortOrderOpen(!isSortOrderOpen)}
-        colors={colors}
-      />
-      
-      {/* Items list */}
-      {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>No items in this list yet</Text>
-          }
-        />
-      )}
+      </ScrollView>
 
       {/* Settings Modal */}
       <ListSettingsModal
@@ -809,8 +753,11 @@ const styles = StyleSheet.create({
   dropdownOptionTextSelected: {
     fontWeight: '600',
   },
-  listContainer: {
-    paddingBottom: 16,
+  scrollContent: {
+    flex: 1,
+  },
+  itemsContainer: {
+    padding: 16,
   },
   loader: {
     marginTop: 24,

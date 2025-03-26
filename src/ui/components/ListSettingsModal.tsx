@@ -155,7 +155,7 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
   // Owner settings section
   const renderOwnerSettings = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>List Settings</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Owner Settings</Text>
       <View style={[styles.settingRow, { borderBottomColor: colors.divider }]}>
         <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>Public</Text>
         <Switch
