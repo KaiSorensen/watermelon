@@ -499,6 +499,35 @@ export async function removeListFromFolder(ownerID: string, folderID: string, li
   }
 }
 
+export async function moveListToFolder(ownerID: string, oldFolderID: string, newFolderID: string, listID: string) {
+    // First remove the list from the old folder
+    await removeListFromFolder(ownerID, oldFolderID, listID);
+    
+    // Then add it to the new folder with the same configuration
+    const { data: oldConfig } = await supabase
+        .from('librarylists')
+        .select('*')
+        .eq('ownerid', ownerID)
+        .eq('folderid', oldFolderID)
+        .eq('listid', listID)
+        .single();
+
+    if (oldConfig) {
+        await addListToFolder(ownerID, newFolderID, listID, {
+            sortOrder: oldConfig.sortorder,
+            today: oldConfig.today,
+            currentItem: oldConfig.currentitem,
+            notifyOnNew: oldConfig.notifyonnew,
+            notifyTime: oldConfig.notifytime ? new Date(oldConfig.notifytime) : null,
+            notifyDays: oldConfig.notifydays,
+            orderIndex: oldConfig.orderindex
+        });
+    } else {
+        // If no old config found, add with default settings
+        await addListToFolder(ownerID, newFolderID, listID);
+    }
+}
+
 // ======= LIBRARY FUNCTIONS =======
 
 export async function populateLibrary(user: User) {

@@ -15,6 +15,7 @@ import { List } from '../../classes/List';
 import { useColors } from '../../contexts/ColorContext';
 import { useAuth } from '../../contexts/UserContext';
 import { removeListFromFolder, deleteList } from '../../supabase/databaseService';
+import { Folder } from '../../classes/Folder';
 
 // Define type for sort order
 type SortOrderType = "date-first" | "date-last" | "alphabetical" | "manual";
@@ -78,6 +79,69 @@ const SortOrderDropdown: React.FC<SortOrderDropdownProps> = ({ value, onChange, 
   );
 };
 
+// Define props interface for the folder dropdown component
+interface FolderDropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  isOpen: boolean;
+  toggleOpen: () => void;
+  colors: any;
+  folders: Folder[];
+}
+
+// Dropdown component for folder selection
+const FolderDropdown: React.FC<FolderDropdownProps> = ({ value, onChange, isOpen, toggleOpen, colors, folders }) => {
+  const getFolderName = (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    return folder ? folder.name : 'Unknown Folder';
+  };
+  
+  return (
+    <View style={[styles.dropdownContainer, { borderColor: colors.divider }]}>
+      <TouchableOpacity 
+        style={[styles.dropdownHeader, { backgroundColor: colors.backgroundSecondary }]} 
+        onPress={toggleOpen}
+      >
+        <Text style={[styles.dropdownHeaderText, { color: colors.textPrimary }]}>Folder: {getFolderName(value)}</Text>
+        <Icon 
+          name={isOpen ? "chevron-up" : "chevron-down"} 
+          size={24} 
+          color={colors.iconSecondary}
+        />
+      </TouchableOpacity>
+      
+      {isOpen && (
+        <View style={styles.dropdownOptions}>
+          {folders.map((folder) => (
+            <TouchableOpacity
+              key={folder.id}
+              style={[
+                styles.dropdownOption,
+                { borderBottomColor: colors.divider },
+                value === folder.id && [styles.dropdownOptionSelected, { backgroundColor: colors.backgroundTertiary }]
+              ]}
+              onPress={() => {
+                onChange(folder.id);
+                toggleOpen();
+              }}
+            >
+              <Text 
+                style={[
+                  styles.dropdownOptionText,
+                  { color: colors.textSecondary },
+                  value === folder.id && [styles.dropdownOptionTextSelected, { color: colors.primary }]
+                ]}
+              >
+                {folder.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
 interface ListSettingsModalProps {
   visible: boolean;
   onClose: () => void;
@@ -105,6 +169,7 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
   const [notifyDays, setNotifyDays] = useState<number[]>([]);
   const [sortOrder, setSortOrder] = useState<'date-first' | 'date-last'>('date-first');
   const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
+  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
   
   // Local state for immediate feedback
   const [localSettings, setLocalSettings] = useState({
@@ -123,6 +188,18 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
       sortOrder: list.sortOrder as SortOrderType,
     });
   }, [visible, list]);
+
+  const handleFolderChange = async (newFolderId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await currentUser.moveListToFolder(list, newFolderId);
+      onSave({ folderID: newFolderId });
+    } catch (error) {
+      console.error('Error moving list to new folder:', error);
+      Alert.alert('Error', 'Failed to move list to new folder. Please try again.');
+    }
+  };
 
   const handleRemoveFromLibrary = async () => {
     if (!list || !currentUser) return;
@@ -250,17 +327,33 @@ const ListSettingsModal: React.FC<ListSettingsModalProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
         <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
+          <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>List Settings</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color={colors.iconPrimary} />
+            <TouchableOpacity onPress={onClose}>
+              <Icon name="close" size={24} color={colors.iconSecondary} />
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.modalBody}>
+            {/* Folder Selection */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Location</Text>
+              <FolderDropdown
+                value={list.folderID}
+                onChange={handleFolderChange}
+                isOpen={isFolderDropdownOpen}
+                toggleOpen={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
+                colors={colors}
+                folders={currentUser?.getAllFolders() || []}
+              />
+            </View>
+
+            {/* Owner Settings */}
             {isOwner && renderOwnerSettings()}
+
+            {/* Library Settings */}
             {renderLibrarySettings()}
             
             {/* Remove/Delete Button */}

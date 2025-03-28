@@ -1,4 +1,4 @@
-import { retrieveUser, updateUser } from '../supabase/databaseService';
+import { retrieveUser, updateUser, moveListToFolder } from '../supabase/databaseService';
 import { Folder } from './Folder';
 import { List } from './List';
 import { TodayInfo } from './TodayInfo';
@@ -173,6 +173,31 @@ export class User {
 
     public refreshTodayLists() {
         this._todayInfo.updateTodayLists(this.getTodayLists());
+    }
+
+    public async moveListToFolder(list: List, newFolderId: string) {
+        if (!list.currentUserID) {
+            throw new Error('List is not in any user\'s library');
+        }
+
+        // Remove list from current folder
+        const currentFolder = this.getFolder(list.folderID);
+        if (currentFolder) {
+            currentFolder.removeList(list);
+        }
+
+        // Add list to new folder
+        const newFolder = this.getFolder(newFolderId);
+        if (newFolder) {
+            newFolder.addList(list);
+            // Update the list's folder ID in memory
+            (list as any)._folderID = newFolderId;
+            
+            // Update the database
+            await moveListToFolder(list.currentUserID, list.folderID, newFolderId, list.id);
+        } else {
+            throw new Error('New folder not found');
+        }
     }
 }
 
