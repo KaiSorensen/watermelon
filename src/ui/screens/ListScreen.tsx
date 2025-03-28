@@ -324,7 +324,7 @@ const ListScreen: React.FC<ListScreenProps> = ({ list, onBack }) => {
     );
 
     try {
-      await storeNewItem(newItem);
+      await storeNewItem(currentUser.id, newItem);
       setItems([...items, newItem]);
       setSelectedItem(newItem);
     } catch (error) {

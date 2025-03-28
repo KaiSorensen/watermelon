@@ -357,79 +357,89 @@ const SearchScreen = () => {
       </View>
 
       {/* Filter Chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsContainer}
-      >
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { backgroundColor: activeFilter === 'library' ? colors.primary : colors.backgroundSecondary }
-          ]}
-          onPress={() => handleFilterChange('library')}
+      <View style={styles.chipsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsContainer}
         >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.chipText,
-              { color: activeFilter === 'library' ? 'white' : colors.textSecondary }
+              styles.chip,
+              { backgroundColor: activeFilter === 'library' ? colors.primary : colors.backgroundSecondary },
+              activeFilter === 'library' && styles.selectedChip
             ]}
+            onPress={() => handleFilterChange('library')}
           >
-            Library
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.chipText,
+                { color: activeFilter === 'library' ? 'white' : colors.textSecondary },
+                activeFilter === 'library' && styles.selectedChipText
+              ]}
+            >
+              Library
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { backgroundColor: activeFilter === 'lists' ? colors.primary : colors.backgroundSecondary }
-          ]}
-          onPress={() => handleFilterChange('lists')}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.chipText,
-              { color: activeFilter === 'lists' ? 'white' : colors.textSecondary }
+              styles.chip,
+              { backgroundColor: activeFilter === 'lists' ? colors.primary : colors.backgroundSecondary },
+              activeFilter === 'lists' && styles.selectedChip
             ]}
+            onPress={() => handleFilterChange('lists')}
           >
-            Lists
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.chipText,
+                { color: activeFilter === 'lists' ? 'white' : colors.textSecondary },
+                activeFilter === 'lists' && styles.selectedChipText
+              ]}
+            >
+              Lists
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { backgroundColor: activeFilter === 'items' ? colors.primary : colors.backgroundSecondary }
-          ]}
-          onPress={() => handleFilterChange('items')}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.chipText,
-              { color: activeFilter === 'items' ? 'white' : colors.textSecondary }
+              styles.chip,
+              { backgroundColor: activeFilter === 'items' ? colors.primary : colors.backgroundSecondary },
+              activeFilter === 'items' && styles.selectedChip
             ]}
+            onPress={() => handleFilterChange('items')}
           >
-            Items
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.chipText,
+                { color: activeFilter === 'items' ? 'white' : colors.textSecondary },
+                activeFilter === 'items' && styles.selectedChipText
+              ]}
+            >
+              Items
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { backgroundColor: activeFilter === 'users' ? colors.primary : colors.backgroundSecondary }
-          ]}
-          onPress={() => handleFilterChange('users')}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.chipText,
-              { color: activeFilter === 'users' ? 'white' : colors.textSecondary }
+              styles.chip,
+              { backgroundColor: activeFilter === 'users' ? colors.primary : colors.backgroundSecondary },
+              activeFilter === 'users' && styles.selectedChip
             ]}
+            onPress={() => handleFilterChange('users')}
           >
-            Users
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+            <Text
+              style={[
+                styles.chipText,
+                { color: activeFilter === 'users' ? 'white' : colors.textSecondary },
+                activeFilter === 'users' && styles.selectedChipText
+              ]}
+            >
+              Users
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       {/* Results or Empty State */}
       {isEasterEgg ? (
@@ -506,21 +516,31 @@ const styles = StyleSheet.create({
   clearButton: {
     padding: 4,
   },
+  chipsWrapper: {
+    height: 50,
+  },
   chipsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   chip: {
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginRight: 10,
-    minWidth: 80,
-    maxHeight: 40,
+    minWidth: 100,
+    height: 36,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedChip: {
+    // Color is set dynamically
   },
   chipText: {
     fontWeight: '500',
+  },
+  selectedChipText: {
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,

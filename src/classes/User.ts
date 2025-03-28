@@ -1,7 +1,12 @@
 import { retrieveUser, updateUser } from '../supabase/databaseService';
 import { Folder } from './Folder';
 import { List } from './List';
+import { TodayInfo } from './TodayInfo';
+
 export class User {
+
+    private _todayInfo: TodayInfo;
+
     private _id: string;
     private _username: string;
     private _email: string;
@@ -24,6 +29,7 @@ export class User {
         updatedAt: Date,
         notifsEnabled: boolean
     ) {
+
         this._id = id;
         this._username = username;
         this._email = email;
@@ -34,7 +40,13 @@ export class User {
 
         this._rootFolders = [];
         this._listMap = new Map<string, List>();
+
+
+        this._todayInfo = new TodayInfo(this.getTodayLists());
     }
+
+    get todayInfo(): TodayInfo { return this._todayInfo; }
+    set todayInfo(value: TodayInfo) { this._todayInfo = value; }
 
     // Getters for read-only properties
     get id(): string { return this._id; }
@@ -157,6 +169,10 @@ export class User {
 
     public getTodayLists() {
         return Array.from(this._listMap.values()).filter(l => l.today);
+    }
+
+    public refreshTodayLists() {
+        this._todayInfo.updateTodayLists(this.getTodayLists());
     }
 }
 

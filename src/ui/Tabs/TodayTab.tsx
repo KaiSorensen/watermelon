@@ -11,27 +11,28 @@ import {
 } from 'react-native';
 import { List } from '../../classes/List';
 import { Item } from '../../classes/Item';
-import PreviewItem from '../components/PreviewItem';
+import { TodayInfo } from '../../classes/TodayInfo';
 import { useAuth } from '../../contexts/UserContext';
 import { useColors } from '../../contexts/ColorContext';
 import ListScreen from '../screens/ListScreen';
+import ItemScreen from '../screens/ItemScreen';
 
 const TodayScreen = () => {
   const { currentUser, loading } = useAuth();
   const { colors } = useColors();
-  const [todayLists, setTodayLists] = useState<List[]>([]);
+  const [todayInfo, setTodayInfo] = useState<TodayInfo | null>(null);
   const [selectedListIndex, setSelectedListIndex] = useState<number>(0);
-  const [currentItem, setCurrentItem] = useState<Item | undefined>(undefined);
   const [loadingLists, setLoadingLists] = useState<boolean>(true);
   const [selectedListForView, setSelectedListForView] = useState<List | null>(null);
+  const [displayedItem, setDisplayedItem] = useState<Item | null>(null);
   const chipsScrollViewRef = useRef<ScrollView>(null);
   const { width } = Dimensions.get('window');
 
-  // Fetch today lists on component mount or when user changes
+  // Fetch today info on component mount or when user changes
   useEffect(() => {
-    const fetchTodayLists = async () => {
+    const fetchTodayInfo = async () => {
       if (!currentUser) {
-        setTodayLists([]);
+        setTodayInfo(null);
         setLoadingLists(false);
         return;
       }
@@ -39,68 +40,70 @@ const TodayScreen = () => {
       setLoadingLists(true);
       try {
         const lists = currentUser.getTodayLists();
-        setTodayLists(lists);
+        const info = new TodayInfo(lists);
+        setTodayInfo(info);
         
         // Select first list if available
         if (lists.length > 0) {
           setSelectedListIndex(0);
-          // In the future, we'll fetch the today item for the selected list
-          // const todayItem = await lists[0].getTodayItem();
-          // setCurrentItem(todayItem);
         }
       } catch (error) {
-        console.error('Error fetching today lists:', error);
+        console.error('Error fetching today info:', error);
       } finally {
         setLoadingLists(false);
       }
     };
 
     if (!loading) {
-      fetchTodayLists();
+      fetchTodayInfo();
     }
   }, [currentUser, loading]);
 
+  // Update displayed item when todayInfo changes or items load
+  useEffect(() => {
+    if (todayInfo && todayInfo.todayLists.length > 0) {
+      const selectedList = todayInfo.todayLists[selectedListIndex];
+      if (selectedList) {
+        // Add a small delay to allow the async item retrieval to complete
+        const timer = setTimeout(() => {
+          const item = todayInfo.getItemForList(selectedList.id);
+          setDisplayedItem(item);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [todayInfo, selectedListIndex]);
+
   // Handle chip selection
   const handleChipPress = (index: number) => {
+    if (!todayInfo) return;
+    
     // If the chip is already selected, open the list view
     if (selectedListIndex === index) {
-      setSelectedListForView(todayLists[index]);
+      setSelectedListForView(todayInfo.todayLists[index]);
       return;
     }
     
     setSelectedListIndex(index);
-    // In the future, we'll fetch the today item for the selected list
-    // const todayItem = todayLists[index].getTodayItem();
-    // setCurrentItem(todayItem);
-    
-    // Scroll to center the selected chip
     scrollToSelectedChip(index);
+    
+    // Update displayed item for the selected list
+    const selectedList = todayInfo.todayLists[index];
+    const selectedItem = todayInfo.getItemForList(selectedList.id);
+    setDisplayedItem(selectedItem);
   };
 
   // Scroll to center the selected chip
   const scrollToSelectedChip = (index: number) => {
-    if (chipsScrollViewRef.current && todayLists.length > 0) {
-      // Calculate position to center the chip
-      const chipWidth = 120; // Approximate width of a chip including margins
+    if (chipsScrollViewRef.current && todayInfo?.todayLists.length) {
+      const chipWidth = 120;
       const scrollToX = index * chipWidth - (width / 2) + (chipWidth / 2);
       
       chipsScrollViewRef.current.scrollTo({ 
         x: Math.max(0, scrollToX), 
         animated: true 
       });
-    }
-  };
-
-  // Handle swipe on preview item
-  const handleSwipeLeft = () => {
-    if (selectedListIndex < todayLists.length - 1) {
-      handleChipPress(selectedListIndex + 1);
-    }
-  };
-
-  const handleSwipeRight = () => {
-    if (selectedListIndex > 0) {
-      handleChipPress(selectedListIndex - 1);
     }
   };
 
@@ -147,6 +150,23 @@ const TodayScreen = () => {
     );
   }
 
+  if (!todayInfo) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Today</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your daily items</Text>
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyTitle, { color: colors.textTertiary }]}>No Today Info</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+            Something went wrong loading your today info
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
@@ -154,45 +174,54 @@ const TodayScreen = () => {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your daily items</Text>
       </View>
 
-      {todayLists.length > 0 ? (
+      {todayInfo.todayLists.length > 0 ? (
         <>
           {/* Horizontal scrollable chips */}
-          <ScrollView
-            ref={chipsScrollViewRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContainer}
-          >
-            {todayLists.map((list, index) => (
-              <TouchableOpacity
-                key={list.id}
-                style={[
-                  styles.chip,
-                  { backgroundColor: selectedListIndex === index ? colors.primary : colors.backgroundSecondary },
-                  selectedListIndex === index && styles.selectedChip
-                ]}
-                onPress={() => handleChipPress(index)}
-              >
-                <Text 
+          <View style={styles.chipsWrapper}>
+            <ScrollView
+              ref={chipsScrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsContainer}
+            >
+              {todayInfo.todayLists.map((list, index) => (
+                <TouchableOpacity
+                  key={list.id}
                   style={[
-                    styles.chipText,
-                    { color: selectedListIndex === index ? 'white' : colors.textSecondary },
-                    selectedListIndex === index && styles.selectedChipText
+                    styles.chip,
+                    { backgroundColor: selectedListIndex === index ? colors.primary : colors.backgroundSecondary },
+                    selectedListIndex === index && styles.selectedChip
                   ]}
+                  onPress={() => handleChipPress(index)}
                 >
-                  {list.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <Text 
+                    style={[
+                      styles.chipText,
+                      { color: selectedListIndex === index ? 'white' : colors.textSecondary },
+                      selectedListIndex === index && styles.selectedChipText
+                    ]}
+                  >
+                    {list.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
-          {/* Preview item */}
-          <View style={styles.previewContainer}>
-            <PreviewItem 
-              item={currentItem}
-              onSwipeLeft={handleSwipeLeft}
-              onSwipeRight={handleSwipeRight}
-            />
+          {/* Item Screen */}
+          <View style={styles.itemContainer}>
+            {displayedItem ? (
+              <ItemScreen 
+                item={displayedItem}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyTitle, { color: colors.textTertiary }]}>No Item Selected</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                  This list doesn't have a current item
+                </Text>
+              </View>
+            )}
           </View>
         </>
       ) : (
@@ -224,9 +253,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
+  chipsWrapper: {
+    height: 50,
+  },
   chipsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   chip: {
     borderRadius: 20,
@@ -234,8 +266,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginRight: 10,
     minWidth: 100,
-    maxHeight: 40,
+    height: 36,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   selectedChip: {
     // Color is set dynamically
@@ -246,7 +279,7 @@ const styles = StyleSheet.create({
   selectedChipText: {
     fontWeight: 'bold',
   },
-  previewContainer: {
+  itemContainer: {
     flex: 1,
     paddingBottom: 20,
   },

@@ -110,7 +110,7 @@ export async function storeNewList(list: List) {
   }
 }
 
-export async function storeNewItem(item: Item) {
+export async function storeNewItem(userID: string, item: Item) {
   // Note: Items table no longer includes an ownerID column
   await supabase.from('items').insert({
     id: item.id,
@@ -120,6 +120,24 @@ export async function storeNewItem(item: Item) {
     imageurls: item.imageURLs,
     orderindex: item.orderIndex
   });
+
+  // First check if the currentitem is null before updating it
+  const { data: libraryData } = await supabase
+    .from('librarylists')
+    .select('currentitem')
+    .eq('ownerid', userID)
+    .eq('listid', item.listID)
+    .maybeSingle();
+  
+  console.log('new item id', item.id);
+
+  // Only update if currentitem is null
+  if (libraryData && libraryData.currentitem === null) {
+    console.log('updating currentitem for list', item.listID, item.id);
+    await supabase.from('librarylists').update({
+      currentitem: item.id
+    }).eq('ownerid', userID).eq('listid', item.listID);
+  }
 }
 
 // ======= SINGLE RETRIEVE FUNCTIONS =======
@@ -401,6 +419,23 @@ export async function deleteList(listId: string): Promise<void> {
 
 export async function deleteItem(itemId: string): Promise<void> {
   const { error } = await supabase.from('items').delete().eq('id', itemId);
+
+  // Check if the item is the current item for any lists
+  const { data: libraryData, error: libraryError } = await supabase
+    .from('librarylists')
+    .select('*')
+    .eq('currentitem', itemId);
+
+  if (libraryData && libraryData.length > 0) {
+    console.log('item is the current item for lists', libraryData.map((entry) => entry.listid));
+  }
+
+
+  //TO DO: update the currentitem for the lists that are using this item as the current item
+
+
+
+
   if (error) {
     throw error;
   }
@@ -499,6 +534,7 @@ export async function populateUserLists(user: User) {
         console.error('Error fetching user lists:', listError);
         continue;
       }
+      console.log('current item for list', listData.title, libraryEntry.currentitem);
       
       lists.push(new List(
         listData.id, 

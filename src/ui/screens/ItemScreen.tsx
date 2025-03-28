@@ -41,6 +41,13 @@ const ItemScreen: React.FC<ItemScreenProps> = ({ item, onBack, canEdit = false }
     console.log('Content preview:', item.content?.substring(0, 100));
   }, []);
 
+  // Update state when item prop changes
+  useEffect(() => {
+    setTitle(item.title || '');
+    setContent(stripHtml(item.content || ''));
+    setHasChanges(false);
+  }, [item]);
+
   // Handle back button press
   useEffect(() => {
     const backAction = () => {
