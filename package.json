@@ -10,6 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@nozbe/simdjson": "^3.9.4",
+    "@nozbe/watermelondb": "^0.25.5",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-google-signin/google-signin": "^13.2.0",
     "@react-native-masked-view/masked-view": "^0.3.2",
@@ -34,6 +36,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/plugin-proposal-decorators": "^7.25.9",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@react-native-community/cli": "15.0.1",
@@ -50,6 +53,7 @@
     "@types/react-test-renderer": "^19.0.0",
     "eslint": "^8.19.0",
     "jest": "^29.6.3",
+    "metro-react-native-babel-preset": "^0.77.0",
     "prettier": "2.8.8",
     "react-test-renderer": "19.0.0",
     "typescript": "5.0.4"

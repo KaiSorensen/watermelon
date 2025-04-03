@@ -1762,7 +1762,11 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - simdjson (3.9.4)
   - SocketRocket (0.7.1)
+  - WatermelonDB (0.25.5):
+    - React
+    - React-jsi
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1843,6 +1847,8 @@ DEPENDENCIES:
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - "simdjson (from `../node_modules/@nozbe/simdjson`)"
+  - "WatermelonDB (from `../node_modules/@nozbe/watermelondb`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2003,6 +2009,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  simdjson:
+    :path: "../node_modules/@nozbe/simdjson"
+  WatermelonDB:
+    :path: "../node_modules/@nozbe/watermelondb"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2085,9 +2095,11 @@ SPEC CHECKSUMS:
   RNGoogleSignin: 5e115ab981ba1a9f5fae37000f49cd996c394df0
   RNScreens: fb427360b2ad917997d779b2b63a946182ce9ce1
   RNVectorIcons: bd818296a51dc2bb8c3bd97a3ca399df1afe216d
+  simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  WatermelonDB: f975618fb9858a3210f3a2645510e2d515b5ba39
   Yoga: afd04ff05ebe0121a00c468a8a3c8080221cb14c
 
-PODFILE CHECKSUM: 8a57d1b1cd3858ec08e0bf64f07ad1a8930d4a81
+PODFILE CHECKSUM: 6a5f0dac9fddf08133e4d983fedc060317577211
 
 COCOAPODS: 1.16.2
